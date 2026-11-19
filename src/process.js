@@ -110,6 +110,18 @@ export function formatVolume(volume) {
   return Math.abs(volume - Math.round(volume)) < 0.05 ? String(Math.round(volume)) : volume.toFixed(1);
 }
 
+export function temperatureFromCelsius(value, unit) {
+  const celsius = Number(value);
+  if (!Number.isFinite(celsius)) return null;
+  return unit === "fahrenheit" ? (celsius * 9) / 5 + 32 : celsius;
+}
+
+export function temperatureToCelsius(value, unit) {
+  const temperature = Number(value);
+  if (!Number.isFinite(temperature)) return null;
+  return unit === "fahrenheit" ? ((temperature - 32) * 5) / 9 : temperature;
+}
+
 export function calculateMix(capacity, developerParts, waterParts) {
   const totalParts = developerParts + waterParts;
   const developerVolume = capacity * developerParts / totalParts;

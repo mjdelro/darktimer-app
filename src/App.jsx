@@ -12,6 +12,8 @@ import {
   HYPO_CLEAR_OPTIONS,
   instructionFor,
   STOP_BATH_OPTIONS,
+  temperatureFromCelsius,
+  temperatureToCelsius,
   WASH_OPTIONS
 } from "./process.js";
 import { playDing, playStepComplete, playTick } from "./audio.js";
@@ -86,6 +88,7 @@ export default function App() {
   const [subFormat, setSubFormat] = createSignal("135");
   const [subTime, setSubTime] = createSignal("07:30");
   const [subTemp, setSubTemp] = createSignal("20");
+  const [subTempUnit, setSubTempUnit] = createSignal("celsius");
   const [subAgitation, setSubAgitation] = createSignal(AGITATION_SUBMISSION_OPTIONS[0].value);
   const [subNotes, setSubNotes] = createSignal("");
   const [subAttribution, setSubAttribution] = createSignal("");
@@ -265,13 +268,21 @@ export default function App() {
   });
 
   const totalDevSeconds = createMemo(() => Math.max(1, Number(devMinutes()) * 60 + Number(devSeconds())));
+  const customTemperatureValue = createMemo(() => {
+    if (customTemperatureC() === "") return "";
+    const displayValue = temperatureFromCelsius(customTemperatureC(), tempUnit());
+    return displayValue === null ? "" : formatVolume(displayValue);
+  });
+  const customTemperatureLimits = createMemo(() => tempUnit() === "fahrenheit"
+    ? { min: "32.1", max: "122", message: "Enter a temperature above 32°F and no more than 122°F." }
+    : { min: "0.1", max: "50", message: "Enter a temperature above 0°C and no more than 50°C." });
   const customRecipeError = createMemo(() => {
     if (!isCustomRecipe()) return "";
     if (!customFilmName().trim()) return "Enter a custom film name.";
     if (!customDeveloperName().trim()) return "Enter a custom developer name.";
     if (!customDilution().trim()) return "Enter the custom developer dilution.";
     if (!Number.isInteger(Number(customEi())) || Number(customEi()) <= 0) return "Enter a positive whole-number EI.";
-    if (!Number.isFinite(Number(customTemperatureC())) || Number(customTemperatureC()) <= 0 || Number(customTemperatureC()) > 50) return "Enter a temperature between 0 and 50°C.";
+    if (!Number.isFinite(Number(customTemperatureC())) || Number(customTemperatureC()) <= 0 || Number(customTemperatureC()) > 50) return customTemperatureLimits().message;
     return "";
   });
   const effectiveRecipe = createMemo(() => isCustomRecipe()
@@ -281,7 +292,7 @@ export default function App() {
         developer: customDeveloperName().trim(),
         dilution: customDilution().trim(),
         seconds: totalDevSeconds(),
-        temperatureC: Number(customTemperatureC()),
+        temperatureC: Math.round(Number(customTemperatureC()) * 10) / 10,
         ei: Number(customEi()),
         format: customFormat(),
         agitation: devAgitation(),
@@ -291,7 +302,16 @@ export default function App() {
     : selectedRecipe());
 
   const formatTemp = (c) =>
-    tempUnit() === "fahrenheit" ? `${formatVolume((c * 9) / 5 + 32)}°F` : `${formatVolume(c)}°C`;
+    `${formatVolume(temperatureFromCelsius(c, tempUnit()))}${tempUnit() === "fahrenheit" ? "°F" : "°C"}`;
+
+  function updateCustomTemperature(displayValue) {
+    if (displayValue === "") {
+      setCustomTemperatureC("");
+      return;
+    }
+    const celsius = temperatureToCelsius(displayValue, tempUnit());
+    setCustomTemperatureC(celsius === null ? "" : String(celsius));
+  }
 
   const formatRecipeOption = (r) => {
     const fmt = FORMAT_NAMES[r.format] || r.format || "Any format";
@@ -495,7 +515,8 @@ export default function App() {
       setSubAgitation(recipe.agitation || "standard");
     }
     setSubDate(localDateValue());
-    setSubTemp(String(customTemperatureC()));
+    setSubTemp(customTemperatureValue());
+    setSubTempUnit(tempUnit());
     setSubUrl("");
     setSubNotes("");
     setSubCertified(false);
@@ -541,7 +562,7 @@ export default function App() {
       format: subFormat(),
       time: subTime(),
       temperature: subTemp(),
-      temperatureUnit: "celsius",
+      temperatureUnit: subTempUnit(),
       agitation: subAgitation(),
       notes: subNotes(),
       submissionType: "community-test",
@@ -793,8 +814,17 @@ export default function App() {
                       </select>
                     </div>
                     <div class="sub-field sub-field-full">
-                      <label for="customTemperature">Developer temperature (°C) *</label>
-                      <input id="customTemperature" type="number" min="0.1" max="50" step="0.1" required value={customTemperatureC()} onInput={(e) => setCustomTemperatureC(e.currentTarget.value)} />
+                      <label for="customTemperature">Developer temperature ({tempUnit() === "fahrenheit" ? "°F" : "°C"}) *</label>
+                      <input
+                        id="customTemperature"
+                        type="number"
+                        min={customTemperatureLimits().min}
+                        max={customTemperatureLimits().max}
+                        step="0.1"
+                        required
+                        value={customTemperatureValue()}
+                        onInput={(e) => updateCustomTemperature(e.currentTarget.value)}
+                      />
                     </div>
                   </Show>
 
@@ -1245,7 +1275,7 @@ export default function App() {
                 <div><dt>Developer</dt><dd>{subDeveloper()}</dd></div>
                 <div><dt>Dilution</dt><dd>{subDilution()}</dd></div>
                 <div><dt>Time</dt><dd>{subTime()}</dd></div>
-                <div><dt>Temperature</dt><dd>{subTemp()}°C</dd></div>
+                <div><dt>Temperature</dt><dd>{subTemp()}{subTempUnit() === "fahrenheit" ? "°F" : "°C"}</dd></div>
                 <div><dt>EI / Format</dt><dd>EI {subEi()} · {FORMAT_NAMES[subFormat()] || subFormat()}</dd></div>
                 <div><dt>Submitted</dt><dd>{subDate()}</dd></div>
                 <div class="submit-review-full"><dt>Agitation</dt><dd>{AGITATION_SUBMISSION_OPTIONS.find((option) => option.value === subAgitation())?.label || subAgitation()}</dd></div>

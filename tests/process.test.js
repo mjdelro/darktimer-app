@@ -9,12 +9,19 @@ import {
   formatTime,
   HYPO_CLEAR_OPTIONS,
   STOP_BATH_OPTIONS,
+  temperatureFromCelsius,
+  temperatureToCelsius,
   WASH_OPTIONS
 } from "../src/process.js";
 import { buildRecipeIssueUrl, parseTempToC, parseTimeToSeconds, validateRecipeSubmission } from "../src/submission.js";
 
 assert.equal(formatTime(90), "01:30");
 assert.equal(formatTime(0), "00:00");
+assert.equal(temperatureFromCelsius(20, "fahrenheit"), 68);
+assert.equal(temperatureFromCelsius(20, "celsius"), 20);
+assert.equal(temperatureToCelsius(68, "fahrenheit"), 20);
+assert.equal(temperatureToCelsius(20, "celsius"), 20);
+assert.equal(temperatureFromCelsius("not-a-temperature", "fahrenheit"), null);
 
 const mix = calculateMix(500, 1, 50);
 assert.ok(Math.abs(mix.developerVolume - 9.8039) < 0.01);
@@ -169,5 +176,13 @@ assert.match(communityIssueBody, /"confidence": "community-reported"/);
 assert.match(communityIssueBody, /\*\*Submission date\*\* \| 2026-11-19/);
 assert.match(communityIssueBody, /community-issue-ISSUE_NUMBER/);
 assert.match(communityIssueBody, /written permission to publish/);
+
+const fahrenheitCommunityIssueBody = new URL(buildRecipeIssueUrl({
+  ...communitySubmission,
+  temperature: "70",
+  temperatureUnit: "fahrenheit"
+})).searchParams.get("body");
+assert.match(fahrenheitCommunityIssueBody, /70°F \(21\.1°C\)/);
+assert.match(fahrenheitCommunityIssueBody, /"temperatureC": 21\.1/);
 
 console.log("Development process tests passed.");
