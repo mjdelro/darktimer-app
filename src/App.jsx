@@ -794,7 +794,7 @@ export default function App() {
               <h2>{currentInstruction().title}</h2>
               <p>{currentInstruction().detail}</p>
               <Show when={nextStep()}>
-                {(next) => <p style={{ "margin-top": "8px" }}>Up next: <strong>{next().name}</strong> ({formatTime(next().seconds)})</p>}
+                {(next) => <p class="up-next">Up next: <strong>{next().name}</strong> ({formatTime(next().seconds)})</p>}
               </Show>
             </div>
 
@@ -873,12 +873,15 @@ export default function App() {
         <Show when={screen() === "complete"}>
           <section class="timer-screen">
             <div class="timer-display">00:00</div>
+            <div class="tank-stage is-pouring">
+              <img src="./assets/images/canister-vfd-pour.svg" alt="Pouring developing tank" />
+            </div>
             <div class="instruction-panel">
               <p class="instruction-kicker">All {activeSteps().length} steps complete</p>
               <h2>Development process finished.</h2>
               <p>Remove your film from the Photo-Flo bath and hang to dry in a dust-free spot.</p>
             </div>
-            <button class="primary-button" style={{ width: "auto", padding: "0 28px" }} type="button" onClick={resetProcess}>
+            <button class="primary-button primary-button-inline" type="button" onClick={resetProcess}>
               Develop another roll
             </button>
           </section>
