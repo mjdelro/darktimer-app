@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Phosphor Glow Filter -->
+    <filter id="vfd-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.2" result="blur1"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6.5" result="blur2"/>
+      <feMerge>
+        <feMergeNode in="blur2"/>
+        <feMergeNode in="blur1"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Primary Rainbow VFD Stroke Gradient -->
+    <linearGradient id="rainbow-stroke" gradientUnits="userSpaceOnUse" x1="84" y1="90" x2="428" y2="430">
+      <stop offset="0%" stop-color="#ff477e"/>
+      <stop offset="18%" stop-color="#ff9e2c"/>
+      <stop offset="36%" stop-color="#ffee32"/>
+      <stop offset="54%" stop-color="#39ff88"/>
+      <stop offset="72%" stop-color="#2ee8ff"/>
+      <stop offset="88%" stop-color="#7c5cff"/>
+      <stop offset="100%" stop-color="#ff4fd8"/>
+    </linearGradient>
+
+    <!-- Bright Rainbow Highlight Gradient -->
+    <linearGradient id="rainbow-bright" gradientUnits="userSpaceOnUse" x1="84" y1="90" x2="428" y2="430">
+      <stop offset="0%" stop-color="#ff85a8"/>
+      <stop offset="18%" stop-color="#ffc178"/>
+      <stop offset="36%" stop-color="#fff685"/>
+      <stop offset="54%" stop-color="#85ffb7"/>
+      <stop offset="72%" stop-color="#85f3ff"/>
+      <stop offset="88%" stop-color="#b19eff"/>
+      <stop offset="100%" stop-color="#ff94ea"/>
+    </linearGradient>
+
+    <!-- Body Translucent Rainbow Fill -->
+    <linearGradient id="body-fill" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff477e" stop-opacity="0.22"/>
+      <stop offset="22%" stop-color="#ff9e2c" stop-opacity="0.34"/>
+      <stop offset="42%" stop-color="#ffee32" stop-opacity="0.24"/>
+      <stop offset="62%" stop-color="#39ff88" stop-opacity="0.22"/>
+      <stop offset="82%" stop-color="#2ee8ff" stop-opacity="0.26"/>
+      <stop offset="100%" stop-color="#9d5cff" stop-opacity="0.20"/>
+    </linearGradient>
+
+    <!-- Lid Top Translucent Rainbow Fill -->
+    <linearGradient id="lid-top-fill" x1="15%" y1="0%" x2="85%" y2="100%">
+      <stop offset="0%" stop-color="#ff477e" stop-opacity="0.28"/>
+      <stop offset="35%" stop-color="#ffee32" stop-opacity="0.22"/>
+      <stop offset="70%" stop-color="#2ee8ff" stop-opacity="0.24"/>
+      <stop offset="100%" stop-color="#9d5cff" stop-opacity="0.28"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Main VFD Phosphor Graphic -->
+  <g filter="url(#vfd-glow)">
+
+    <!-- 1. Canister Body -->
+    <path d="M 102.00 220.00 L 102.00 408.00 A 154 51 0 0 0 410.00 408.00 L 410.00 220.00 A 172 58 0 0 1 102.00 220.00 Z"
+          fill="url(#body-fill)" stroke="none"/>
+    <!-- Body Specular VFD Bars -->
+    <path d="M 161.19 247.19 L 176.68 250.72 L 176.68 443.72 L 161.19 440.19 Z" fill="#ff9e2c" fill-opacity="0.30"/>
+    <path d="M 183.70 252.03 L 208.41 255.50 L 208.41 448.50 L 183.70 445.03 Z" fill="#ffd94a" fill-opacity="0.72"/>
+    <path d="M 216.14 256.26 L 229.26 257.23 L 229.26 450.23 L 216.14 449.26 Z" fill="#7dff8a" fill-opacity="0.45"/>
+    <path d="M 370.44 241.13 L 375.68 239.10 L 375.68 432.10 L 370.44 434.13 Z" fill="#8c6eff" fill-opacity="0.32"/>
+    <!-- Body Outer Phosphor Contour -->
+    <path d="M 102.00 220.00 L 102.00 408.00 A 154 51 0 0 0 410.00 408.00 L 410.00 220.00"
+          fill="none" stroke="url(#rainbow-stroke)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Subtle inner bottom rim line -->
+    <path d="M 114.00 404.00 A 142 46 0 0 0 398.00 404.00"
+          fill="none" stroke="url(#rainbow-stroke)" stroke-width="1.2" stroke-opacity="0.45" stroke-linecap="round"/>
+
+    <!-- 2. Main Ribbed Lid -->
+    <!-- Lid Top Surface -->
+    <path d="M 430.40 146.00 L 429.08 148.18 L 426.32 150.30 L 424.53 152.40 L 424.89 154.58 L 426.18 156.86 L 426.03 159.09 L 423.30 161.12 L 419.21 162.98 L 416.08 164.89 L 414.99 167.04 L 414.75 169.36 L 413.13 171.52 L 409.13 173.29 L 403.92 174.80 L 399.60 176.43 L 397.12 178.44 L 395.36 180.68 L 392.35 182.67 L 387.28 184.10 L 381.21 185.17 L 375.93 186.44 L 372.17 188.22 L 368.98 190.27 L 364.74 191.98 L 358.85 192.99 L 352.22 193.59 L 346.23 194.42 L 341.40 195.88 L 336.93 197.64 L 331.67 198.99 L 325.26 199.53 L 318.40 199.61 L 312.02 199.98 L 306.34 201.04 L 300.83 202.41 L 294.81 203.33 L 288.20 203.39 L 281.46 202.95 L 274.99 202.83 L 268.76 203.43 L 262.48 204.36 L 256.00 204.81 L 249.52 204.36 L 243.24 203.43 L 237.01 202.83 L 230.54 202.95 L 223.80 203.39 L 217.19 203.33 L 211.17 202.41 L 205.66 201.04 L 199.98 199.98 L 193.60 199.61 L 186.74 199.53 L 180.33 198.99 L 175.07 197.64 L 170.60 195.88 L 165.77 194.42 L 159.78 193.59 L 153.15 192.99 L 147.26 191.98 L 143.02 190.27 L 139.83 188.22 L 136.07 186.44 L 130.79 185.17 L 124.72 184.10 L 119.65 182.67 L 116.64 180.68 L 114.88 178.44 L 112.40 176.43 L 108.08 174.80 L 102.87 173.29 L 98.87 171.52 L 97.25 169.36 L 97.01 167.04 L 95.92 164.89 L 92.79 162.98 L 88.70 161.12 L 85.97 159.09 L 85.82 156.86 L 87.11 154.58 L 87.47 152.40 L 85.68 150.30 L 82.92 148.18 L 81.60 146.00 L 82.92 143.82 L 85.68 141.70 L 87.47 139.60 L 87.11 137.42 L 85.82 135.14 L 85.97 132.91 L 88.70 130.88 L 92.79 129.02 L 95.92 127.11 L 97.01 124.96 L 97.25 122.64 L 98.87 120.48 L 102.87 118.71 L 108.08 117.20 L 112.40 115.57 L 114.88 113.56 L 116.64 111.32 L 119.65 109.33 L 124.72 107.90 L 130.79 106.83 L 136.07 105.56 L 139.83 103.78 L 143.02 101.73 L 147.26 100.02 L 153.15 99.01 L 159.78 98.41 L 165.77 97.58 L 170.60 96.12 L 175.07 94.36 L 180.33 93.01 L 186.74 92.47 L 193.60 92.39 L 199.98 92.02 L 205.66 90.96 L 211.17 89.59 L 217.19 88.67 L 223.80 88.61 L 230.54 89.05 L 237.01 89.17 L 243.24 88.57 L 249.52 87.64 L 256.00 87.19 L 262.48 87.64 L 268.76 88.57 L 274.99 89.17 L 281.46 89.05 L 288.20 88.61 L 294.81 88.67 L 300.83 89.59 L 306.34 90.96 L 312.02 92.02 L 318.40 92.39 L 325.26 92.47 L 331.67 93.01 L 336.93 94.36 L 341.40 96.12 L 346.23 97.58 L 352.22 98.41 L 358.85 99.01 L 364.74 100.02 L 368.98 101.73 L 372.17 103.78 L 375.93 105.56 L 381.21 106.83 L 387.28 107.90 L 392.35 109.33 L 395.36 111.32 L 397.12 113.56 L 399.60 115.57 L 403.92 117.20 L 409.13 118.71 L 413.13 120.48 L 414.75 122.64 L 414.99 124.96 L 416.08 127.11 L 419.21 129.02 L 423.30 130.88 L 426.03 132.91 L 426.18 135.14 L 424.89 137.42 L 424.53 139.60 L 426.32 141.70 L 429.08 143.82 Z"
+          fill="url(#lid-top-fill)" stroke="url(#rainbow-stroke)" stroke-width="2.6" stroke-linejoin="round"/>
+
+    <!-- Lid Front Vertical Ribs (Rainbow VFD segmented bars, left-to-right spectrum) -->
+    <path d="M 89.72 165.42 L 86.10 158.51 L 86.10 197.51 L 89.72 204.42 Z" fill="#ff3b6b" fill-opacity="0.80" stroke="#ff85a3" stroke-width="0.6" stroke-opacity="0.70" stroke-linejoin="round"/>
+    <path d="M 103.41 177.96 L 95.14 171.51 L 95.14 210.51 L 103.41 216.96 Z" fill="#ff6a33" fill-opacity="0.85" stroke="#ffa585" stroke-width="0.6" stroke-opacity="0.72" stroke-linejoin="round"/>
+    <path d="M 125.33 189.09 L 112.86 183.46 L 112.86 222.46 L 125.33 228.09 Z" fill="#ff9f2e" fill-opacity="0.90" stroke="#ffc785" stroke-width="0.6" stroke-opacity="0.75" stroke-linejoin="round"/>
+    <path d="M 154.29 198.22 L 138.29 193.71 L 138.29 232.71 L 154.29 237.22 Z" fill="#ffd42e" fill-opacity="0.94" stroke="#ffe785" stroke-width="0.6" stroke-opacity="0.78" stroke-linejoin="round"/>
+    <path d="M 188.73 204.86 L 170.07 201.71 L 170.07 240.71 L 188.73 243.86 Z" fill="#d9ff33" fill-opacity="0.98" stroke="#ebff85" stroke-width="0.6" stroke-opacity="0.80" stroke-linejoin="round"/>
+    <path d="M 226.80 208.66 L 206.48 207.04 L 206.48 246.04 L 226.80 247.66 Z" fill="#6bff57" fill-opacity="0.95" stroke="#a6ff99" stroke-width="0.6" stroke-opacity="0.78" stroke-linejoin="round"/>
+    <path d="M 266.44 209.39 L 245.56 209.39 L 245.56 248.39 L 266.44 248.39 Z" fill="#39ff88" fill-opacity="0.92" stroke="#85ffb7" stroke-width="0.6" stroke-opacity="0.75" stroke-linejoin="round"/>
+    <path d="M 305.52 207.04 L 285.20 208.66 L 285.20 247.66 L 305.52 246.04 Z" fill="#2effd2" fill-opacity="0.88" stroke="#85ffe7" stroke-width="0.6" stroke-opacity="0.72" stroke-linejoin="round"/>
+    <path d="M 341.93 201.71 L 323.27 204.86 L 323.27 243.86 L 341.93 240.71 Z" fill="#2ecbff" fill-opacity="0.84" stroke="#85e2ff" stroke-width="0.6" stroke-opacity="0.68" stroke-linejoin="round"/>
+    <path d="M 373.71 193.71 L 357.71 198.22 L 357.71 237.22 L 373.71 232.71 Z" fill="#3b8cff" fill-opacity="0.80" stroke="#8cbaff" stroke-width="0.6" stroke-opacity="0.64" stroke-linejoin="round"/>
+    <path d="M 399.14 183.46 L 386.67 189.09 L 386.67 228.09 L 399.14 222.46 Z" fill="#705cff" fill-opacity="0.76" stroke="#a89eff" stroke-width="0.6" stroke-opacity="0.60" stroke-linejoin="round"/>
+    <path d="M 416.86 171.51 L 408.59 177.96 L 408.59 216.96 L 416.86 210.51 Z" fill="#b84dff" fill-opacity="0.72" stroke="#d494ff" stroke-width="0.6" stroke-opacity="0.56" stroke-linejoin="round"/>
+    <path d="M 425.90 158.51 L 422.28 165.42 L 422.28 204.42 L 425.90 197.51 Z" fill="#ff4fd8" fill-opacity="0.68" stroke="#ff94e8" stroke-width="0.6" stroke-opacity="0.52" stroke-linejoin="round"/>
+
+    <!-- Lid Skirt Outer Edges & Bottom Arc -->
+    <path d="M 84.00 146.00 L 84.00 194.00 A 172 58 0 0 0 428.00 194.00 L 428.00 146.00"
+          fill="none" stroke="url(#rainbow-stroke)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- 3. Raised Middle Collar -->
+    <ellipse cx="256" cy="133" rx="118" ry="37" fill="#ffffff" fill-opacity="0.04" stroke="url(#rainbow-stroke)" stroke-width="2.2"/>
+    <ellipse cx="256" cy="130" rx="114" ry="34" fill="url(#lid-top-fill)" stroke="url(#rainbow-bright)" stroke-width="2.0"/>
+
+    <!-- 4. Back-Left Pull Tab (behind center cap) -->
+    <path d="M 222 86 L 208 72 C 202 66 212 58 222 62 L 240 74 Z"
+          fill="#ff6a33" fill-opacity="0.45" stroke="#ff9e2c" stroke-width="2.2" stroke-linejoin="round"/>
+
+    <!-- 5. Center Cap -->
+    <!-- Cap Side Wall -->
+    <path d="M 182 104 L 182 124 A 74 23 0 0 0 330 124 L 330 104 Z"
+          fill="url(#body-fill)" stroke="url(#rainbow-stroke)" stroke-width="2.4" stroke-linejoin="round"/>
+    <!-- Cap Top Surface -->
+    <ellipse cx="256" cy="102" rx="74" ry="23" fill="url(#lid-top-fill)" stroke="url(#rainbow-bright)" stroke-width="2.6"/>
+    <!-- Inner Cap Ring Detail -->
+    <ellipse cx="256" cy="102" rx="64" ry="18.5" fill="none" stroke="url(#rainbow-stroke)" stroke-width="1.0" stroke-opacity="0.55"/>
+
+  </g>
+</svg>

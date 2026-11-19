@@ -1,0 +1,19 @@
+{
+  "name": "darktimer",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node tests/catalog.test.js && node tests/process.test.js"
+  },
+  "dependencies": {
+    "solid-js": "^1.9.5"
+  },
+  "devDependencies": {
+    "vite": "^6.2.0",
+    "vite-plugin-solid": "^2.11.0"
+  }
+}
