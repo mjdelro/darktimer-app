@@ -873,7 +873,7 @@ export default function App() {
           <section class="timer-screen">
             <div class="timer-display">00:00</div>
             <div class="tank-stage is-pouring">
-              <img src="./assets/images/canister-vfd-pour.svg" alt="Pouring developing tank" />
+              <img src="./assets/images/canister-vfd-pour.svg" alt="Pouring developing tank" width="720" height="720" />
             </div>
             <div class="instruction-panel">
               <p class="instruction-kicker">All {activeSteps().length} steps complete</p>
