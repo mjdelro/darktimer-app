@@ -11,7 +11,7 @@ darkTimer accepts two clearly labeled kinds of recipe data:
 - `manufacturer-published`: minimum factual values manually transcribed from a
   named manufacturer technical publication.
 - `community-reported`: an original empirical darkroom result contributed with
-  permission and at least one successful test.
+  permission.
 
 Use the in-app submission form to create a public GitHub issue. Discord and
 other private messages may be used to collect the details and permission, but
@@ -20,9 +20,8 @@ URLs into the issue. Use the contributor's chosen public credit, including
 `Anonymous` when requested.
 
 Every recipe submission must include the film, format, EI, developer, dilution,
-time, temperature, agitation method, source or test date, and any process limits
-needed to interpret the result. Community reports must also state the number of
-successful tests.
+time, temperature, agitation method, submission date, and any process limits
+needed to interpret the result.
 
 The submitter must affirm all of the following:
 

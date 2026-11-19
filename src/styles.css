@@ -30,8 +30,9 @@ a,
 button,
 summary,
 select,
-input[type="number"] {
-  cursor: pointer;
+input[type="number"],
+.process-panel input[type="text"] {
+  cursor: text;
 }
 
 a:focus-visible,
@@ -533,8 +534,25 @@ input[type="number"] {
 }
 
 select:hover:not(:disabled),
-input[type="number"]:hover {
+input[type="number"]:hover,
+.process-panel input[type="text"]:hover {
   border-color: var(--amber);
+}
+
+.custom-recipe-fields {
+  display: grid;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid #35332d;
+}
+
+.custom-recipe-fields label {
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .presoak-controls {
@@ -926,6 +944,29 @@ select:disabled {
   color: var(--muted);
 }
 
+.submission-prompt {
+  width: min(100%, 680px);
+  padding: 16px 18px;
+  border: 1px solid #555751;
+  color: var(--paper);
+  background: #11120f;
+  text-align: left;
+}
+
+.submission-prompt h3 {
+  margin: 0;
+  color: var(--amber);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 1rem;
+  text-transform: uppercase;
+}
+
+.submission-prompt p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .vcr-deck {
   width: min(100%, 560px);
   padding: 10px;
@@ -1057,16 +1098,6 @@ select:disabled {
   resize: vertical;
 }
 
-.submit-intro {
-  color: var(--muted);
-  font-size: 0.84rem;
-}
-
-.submit-intro a {
-  color: var(--amber);
-  text-underline-offset: 3px;
-}
-
 .submit-privacy {
   padding: 10px 12px;
   border: 1px solid #555751;
@@ -1082,10 +1113,39 @@ select:disabled {
   gap: 10px;
 }
 
-.submit-temp-row {
+.submit-recipe-review {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #555751;
+  background: var(--display);
   display: grid;
-  grid-template-columns: 1fr 72px;
-  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+}
+
+.submit-recipe-review div {
+  min-width: 0;
+}
+
+.submit-recipe-review dt {
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.submit-recipe-review dd {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+  color: var(--paper);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.84rem;
+}
+
+.submit-review-full {
+  grid-column: 1 / -1;
 }
 
 .submit-cert {
@@ -1321,8 +1381,13 @@ footer {
 
   .stage-row,
   .sub-fields,
-  .submit-grid {
+  .submit-grid,
+  .submit-recipe-review {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .submit-review-full {
+    grid-column: auto;
   }
 
   .stage-time-grid {

@@ -18,11 +18,18 @@ import { playDing, playStepComplete, playTick } from "./audio.js";
 import {
   AGITATION_SUBMISSION_OPTIONS,
   buildRecipeIssueUrl,
-  SUBMISSION_TYPES,
   validateRecipeSubmission
 } from "./submission.js";
 
 const FORMAT_NAMES = { any: "Any format", "135": "35mm", "120": "120", sheet: "Sheet" };
+const CUSTOM_RECIPE_KEY = "custom-recipe";
+
+function localDateValue(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 const DEVELOPER_REFERENCE_LINKS = {
   "Kodak HC-110": { url: "https://business.kodakmoments.com/sites/default/files/wysiwyg/pro/chemistry/j24.pdf", label: "Reference: Kodak HC-110 datasheet (J-24)" },
@@ -79,19 +86,15 @@ export default function App() {
   const [subFormat, setSubFormat] = createSignal("135");
   const [subTime, setSubTime] = createSignal("07:30");
   const [subTemp, setSubTemp] = createSignal("20");
-  const [subTempUnit, setSubTempUnit] = createSignal("celsius");
   const [subAgitation, setSubAgitation] = createSignal(AGITATION_SUBMISSION_OPTIONS[0].value);
   const [subNotes, setSubNotes] = createSignal("");
-  const [subSubmissionType, setSubSubmissionType] = createSignal(SUBMISSION_TYPES[0].value);
   const [subAttribution, setSubAttribution] = createSignal("");
-  const [subSourceTitle, setSubSourceTitle] = createSignal("Personal darkroom test log");
   const [subUrl, setSubUrl] = createSignal("");
-  const [subDate, setSubDate] = createSignal(new Date().toISOString().slice(0, 10));
-  const [subSuccessfulTests, setSubSuccessfulTests] = createSignal("1");
+  const [subDate, setSubDate] = createSignal(localDateValue());
   const [subCertified, setSubCertified] = createSignal(false);
   const [activeHint, setActiveHint] = createSignal(null); // "dilution" | "tank" | "agitation" | null
-  let submitModalTrigger;
   let submitDialog;
+  let submitReturnTarget;
 
   createEffect(() => {
     if (!showSubmitModal()) return;
@@ -118,6 +121,12 @@ export default function App() {
   const [selectedDeveloper, setSelectedDeveloper] = createSignal("");
   const [selectedDilution, setSelectedDilution] = createSignal("");
   const [selectedRecipeId, setSelectedRecipeId] = createSignal("");
+  const [customFilmName, setCustomFilmName] = createSignal("");
+  const [customDeveloperName, setCustomDeveloperName] = createSignal("");
+  const [customDilution, setCustomDilution] = createSignal("");
+  const [customEi, setCustomEi] = createSignal("400");
+  const [customFormat, setCustomFormat] = createSignal("135");
+  const [customTemperatureC, setCustomTemperatureC] = createSignal("20");
   const [tankCapacity, setTankCapacity] = createSignal("500");
   const [devAgitation, setDevAgitation] = createSignal("standard");
   const [devMinutes, setDevMinutes] = createSignal(8);
@@ -198,7 +207,15 @@ export default function App() {
     });
   });
 
+  const isCustomRecipe = createMemo(() => selectedFilmKey() === CUSTOM_RECIPE_KEY);
   const selectedFilm = createMemo(() => films().find((f) => f.key === selectedFilmKey()) || null);
+  const catalogDeveloperNames = createMemo(() => {
+    const names = new Set();
+    for (const recipes of customByFilm().values()) {
+      for (const recipe of recipes) names.add(recipe.developer);
+    }
+    return [...names].sort((a, b) => a.localeCompare(b));
+  });
 
   createEffect(async () => {
     const film = selectedFilm();
@@ -247,6 +264,32 @@ export default function App() {
     if (AGITATION_PRESETS[rec.agitation]) setDevAgitation(rec.agitation);
   });
 
+  const totalDevSeconds = createMemo(() => Math.max(1, Number(devMinutes()) * 60 + Number(devSeconds())));
+  const customRecipeError = createMemo(() => {
+    if (!isCustomRecipe()) return "";
+    if (!customFilmName().trim()) return "Enter a custom film name.";
+    if (!customDeveloperName().trim()) return "Enter a custom developer name.";
+    if (!customDilution().trim()) return "Enter the custom developer dilution.";
+    if (!Number.isInteger(Number(customEi())) || Number(customEi()) <= 0) return "Enter a positive whole-number EI.";
+    if (!Number.isFinite(Number(customTemperatureC())) || Number(customTemperatureC()) <= 0 || Number(customTemperatureC()) > 50) return "Enter a temperature between 0 and 50°C.";
+    return "";
+  });
+  const effectiveRecipe = createMemo(() => isCustomRecipe()
+    ? {
+        id: "custom-recipe",
+        film: customFilmName().trim(),
+        developer: customDeveloperName().trim(),
+        dilution: customDilution().trim(),
+        seconds: totalDevSeconds(),
+        temperatureC: Number(customTemperatureC()),
+        ei: Number(customEi()),
+        format: customFormat(),
+        agitation: devAgitation(),
+        confidence: "custom",
+        isCustom: true
+      }
+    : selectedRecipe());
+
   const formatTemp = (c) =>
     tempUnit() === "fahrenheit" ? `${formatVolume((c * 9) / 5 + 32)}°F` : `${formatVolume(c)}°C`;
 
@@ -257,8 +300,9 @@ export default function App() {
   };
 
   const recipeReference = createMemo(() => {
-    const rec = selectedRecipe();
+    const rec = effectiveRecipe();
     if (!rec) return null;
+    if (rec.isCustom) return null;
     if (rec.sourceUrl) {
       return { url: rec.sourceUrl, label: rec.sourceTitle ? `Reference: ${rec.sourceTitle}` : "Recipe reference" };
     }
@@ -266,7 +310,7 @@ export default function App() {
   });
 
   const mixSummary = createMemo(() => {
-    const rec = selectedRecipe();
+    const rec = effectiveRecipe();
     const cap = Number(tankCapacity());
     const mix = dilutionMixFor(rec);
     if (!rec || !cap || !mix) return null;
@@ -276,7 +320,7 @@ export default function App() {
         formula: `${cap} mL stock developer (no water)`,
         note: "Use working-strength stock solution.",
         source: rec.sourceTitle ? `Source: ${rec.sourceTitle}` : "",
-        metadata: `${confidenceLabel(rec.confidence)} · ${AGITATION_PRESETS[rec.agitation]?.label || "Agitation not specified"}`,
+        metadata: `${rec.isCustom ? "Custom recipe" : confidenceLabel(rec.confidence)} · ${AGITATION_PRESETS[rec.agitation]?.label || "Agitation not specified"}`,
         reference: recipeReference()
       };
     }
@@ -286,21 +330,19 @@ export default function App() {
       formula: `${formatVolume(developerVolume)} mL developer + ${formatVolume(waterVolume)} mL water`,
       note: `${mix.displayRatio || rec.dilution} working solution`,
       source: rec.sourceTitle ? `Source: ${rec.sourceTitle}` : "",
-      metadata: `${confidenceLabel(rec.confidence)} · ${AGITATION_PRESETS[rec.agitation]?.label || "Agitation not specified"}`,
+      metadata: `${rec.isCustom ? "Custom recipe" : confidenceLabel(rec.confidence)} · ${AGITATION_PRESETS[rec.agitation]?.label || "Agitation not specified"}`,
       reference: recipeReference()
     };
   });
-
-  const totalDevSeconds = createMemo(() => Math.max(1, Number(devMinutes()) * 60 + Number(devSeconds())));
 
   const plannedSteps = createMemo(() =>
     buildProcessSteps({
       presoakEnabled: presoakEnabled(),
       presoakMode: presoakMode(),
       presoakSeconds: Math.max(1, Number(presoakMinutes())) * 60,
-      filmName: selectedFilm()?.fullName || "Select film",
-      developerName: selectedDeveloper() || "Developer",
-      dilution: selectedDilution(),
+      filmName: effectiveRecipe()?.film || selectedFilm()?.fullName || "Select film",
+      developerName: effectiveRecipe()?.developer || selectedDeveloper() || "Developer",
+      dilution: effectiveRecipe()?.dilution || selectedDilution(),
       devSeconds: totalDevSeconds(),
       devAgitation: devAgitation(),
       stopBathId: stopBathId(),
@@ -326,7 +368,7 @@ export default function App() {
   });
 
   const canStart = createMemo(() => Boolean(
-    selectedRecipe() && Number(tankCapacity()) > 0 && !customTimeError()
+    effectiveRecipe() && Number(tankCapacity()) > 0 && !customRecipeError() && !customTimeError()
   ));
 
   const currentStep = createMemo(() => activeSteps()[stepIndex()] || null);
@@ -439,20 +481,31 @@ export default function App() {
     }
   }
 
-  function openSubmitModal() {
+  function openSubmitModal(event) {
     setSubmitError("");
-    if (!subFilm() && selectedFilm()) setSubFilm(selectedFilm().fullName);
-    if (!subDeveloper() && selectedDeveloper()) setSubDeveloper(selectedDeveloper());
-    if (!subDilution() && selectedDilution()) setSubDilution(selectedDilution());
-    setSubTempUnit(tempUnit());
-    setSubTemp(tempUnit() === "fahrenheit" ? "68" : "20");
+    submitReturnTarget = event?.currentTarget;
+    const recipe = effectiveRecipe();
+    if (recipe) {
+      setSubFilm(recipe.film || "");
+      setSubDeveloper(recipe.developer || "");
+      setSubDilution(recipe.dilution || "");
+      setSubEi(String(recipe.ei || 400));
+      setSubFormat(recipe.format || "135");
+      setSubTime(formatTime(totalDevSeconds()));
+      setSubAgitation(recipe.agitation || "standard");
+    }
+    setSubDate(localDateValue());
+    setSubTemp(String(customTemperatureC()));
+    setSubUrl("");
+    setSubNotes("");
+    setSubCertified(false);
     setShowSubmitModal(true);
-    queueMicrotask(() => submitDialog?.querySelector("#subType")?.focus());
+    queueMicrotask(() => submitDialog?.querySelector("#subAttribution")?.focus());
   }
 
   function closeSubmitModal() {
     setShowSubmitModal(false);
-    queueMicrotask(() => submitModalTrigger?.focus());
+    queueMicrotask(() => submitReturnTarget?.focus());
   }
 
   function handleSubmitDialogKeyDown(event) {
@@ -488,15 +541,14 @@ export default function App() {
       format: subFormat(),
       time: subTime(),
       temperature: subTemp(),
-      temperatureUnit: subTempUnit(),
+      temperatureUnit: "celsius",
       agitation: subAgitation(),
       notes: subNotes(),
-      submissionType: subSubmissionType(),
+      submissionType: "community-test",
       attribution: subAttribution(),
-      sourceTitle: subSourceTitle(),
+      sourceTitle: "Personal darkroom test log",
       sourceUrl: subUrl(),
       retrievedDate: subDate(),
-      successfulTests: subSuccessfulTests(),
       certified: subCertified()
     };
     const error = validateRecipeSubmission(submission);
@@ -559,13 +611,13 @@ export default function App() {
               <p>A black-and-white film development timer with dilution mixing math, audio cues, and chained agitation prompts from presoak through Photo-Flo.</p>
               <ol class="setup-howto">
                 <li>Choose presoak, film, developer, dilution, and tank capacity to calculate your developer and water mix.</li>
-                <li>Pick your recipe and processing stages. Choose a Custom option when you need a different stage time.</li>
+                <li>Pick a verified recipe, or choose Custom recipe and enter the film, developer, dilution, and timing yourself.</li>
                 <li>Press <strong>Start Development Process</strong> and follow the VFD timer, agitation pips, and pour prompts between stages.</li>
               </ol>
 
               <details class="data-note">
                 <summary>About these times</summary>
-                <p>The local catalog contains manufacturer-published times and may include clearly labeled community reports. Each selected recipe shows its source, confidence, and agitation method. Always check the linked source and the current chemistry label before processing important negatives.</p>
+                <p>The local catalog contains manufacturer-published times and may include clearly labeled community reports. Custom recipe names are entered by you and are not imported from an external database. Each selected catalog recipe shows its source, confidence, and agitation method. Always check the linked source and the current chemistry label before processing important negatives.</p>
                 <ul>
                   <li><a href="https://www.kodakprofessional.com/sites/default/files/wysiwyg/pro/resources/edbwf_0.pdf" target="_blank" rel="noreferrer">Kodak black-and-white processing data (ED-BWF, March 2023)</a></li>
                   <li><a href="https://business.kodakmoments.com/sites/default/files/wysiwyg/pro/chemistry/j24.pdf" target="_blank" rel="noreferrer">Kodak HC-110 Developer technical data and dilutions (J-24)</a></li>
@@ -575,9 +627,6 @@ export default function App() {
                   <li><a href="https://www.ilfordphoto.com/amfile/file/download/file/1919/product/689/" target="_blank" rel="noreferrer">Ilford FP4 Plus technical information</a></li>
                 </ul>
               </details>
-              <button ref={submitModalTrigger} class="contribution-button" type="button" onClick={openSubmitModal}>
-                Submit a development time
-              </button>
               <p class="safety-callout"><strong>Safety:</strong> The manufacturer label and safety data sheet control. Use appropriate protective equipment and ventilation, and follow local disposal rules.</p>
 
               <div class="chain-preview">
@@ -662,11 +711,21 @@ export default function App() {
               <div class="stage-card">
                 <div class="stage-row">
                   <label class="stage-label" for="filmSelect"><span class="stage-num">02</span> Film</label>
-                  <select id="filmSelect" value={selectedFilmKey()} onChange={(e) => setSelectedFilmKey(e.currentTarget.value)} disabled={catalogMode() === "loading" || catalogMode() === "error"}>
-                    <option value="">{catalogMode() === "loading" ? "Loading films..." : catalogMode() === "error" ? "Catalog unavailable" : films().length === 0 ? "No verified recipes available" : "Select film"}</option>
+                  <select id="filmSelect" value={selectedFilmKey()} onChange={(e) => setSelectedFilmKey(e.currentTarget.value)} disabled={catalogMode() === "loading"}>
+                    <option value="">{catalogMode() === "loading" ? "Loading films..." : catalogMode() === "error" ? "Catalog unavailable; use Custom recipe" : films().length === 0 ? "No verified recipes available" : "Select film"}</option>
                     <For each={films()}>{(f) => <option value={f.key}>{f.fullName}</option>}</For>
+                    <option value={CUSTOM_RECIPE_KEY}>Custom recipe (enter film and developer)</option>
                   </select>
                 </div>
+                <Show when={isCustomRecipe()}>
+                  <div class="custom-recipe-fields">
+                    <label for="customFilmName">Custom film name *</label>
+                    <input id="customFilmName" list="film-name-suggestions" type="text" required placeholder="Enter the film product name" value={customFilmName()} onInput={(e) => setCustomFilmName(e.currentTarget.value)} />
+                    <datalist id="film-name-suggestions">
+                      <For each={films()}>{(film) => <option value={film.fullName} />}</For>
+                    </datalist>
+                  </div>
+                </Show>
                 <Show when={catalogMode() === "error"}>
                   <p class="catalog-error" role="alert">Could not load the recipe catalog. {catalogError()} <button type="button" onClick={() => window.location.reload()}>Reload</button></p>
                 </Show>
@@ -675,20 +734,37 @@ export default function App() {
               {/* 03 Developer, Dilution & Recipe */}
               <div class="stage-card">
                 <div class="stage-row">
-                  <label class="stage-label" for="devSelect"><span class="stage-num">03</span> Developer</label>
-                  <select id="devSelect" value={selectedDeveloper()} onChange={(e) => { setSelectedDeveloper(e.currentTarget.value); setSelectedDilution(""); setSelectedRecipeId(""); }} disabled={developers().length === 0 || loadingRecipes()}>
-                    <option value="">{loadingRecipes() ? "Loading…" : "Select developer"}</option>
-                    <For each={developers()}>{(d) => <option value={d}>{d}</option>}</For>
-                  </select>
+                  <label class="stage-label" for={isCustomRecipe() ? "customDeveloperName" : "devSelect"}><span class="stage-num">03</span> Developer</label>
+                  <Show
+                    when={!isCustomRecipe()}
+                    fallback={
+                      <>
+                        <input id="customDeveloperName" list="developer-name-suggestions" type="text" required placeholder="Enter the developer product name" value={customDeveloperName()} onInput={(e) => setCustomDeveloperName(e.currentTarget.value)} />
+                        <datalist id="developer-name-suggestions">
+                          <For each={catalogDeveloperNames()}>{(developer) => <option value={developer} />}</For>
+                        </datalist>
+                      </>
+                    }
+                  >
+                    <select id="devSelect" value={selectedDeveloper()} onChange={(e) => { setSelectedDeveloper(e.currentTarget.value); setSelectedDilution(""); setSelectedRecipeId(""); }} disabled={developers().length === 0 || loadingRecipes()}>
+                      <option value="">{loadingRecipes() ? "Loading…" : "Select developer"}</option>
+                      <For each={developers()}>{(d) => <option value={d}>{d}</option>}</For>
+                    </select>
+                  </Show>
                 </div>
 
                 <div class="sub-fields">
                   <div class="sub-field">
                     <button class="hint-sub-button" type="button" onClick={() => setActiveHint("dilution")} title="How to read dilutions">Dilution</button>
-                    <select id="dilSelect" aria-label="Dilution" value={selectedDilution()} onChange={(e) => { setSelectedDilution(e.currentTarget.value); setSelectedRecipeId(""); }} disabled={dilutions().length === 0}>
-                      <option value="">Select dilution</option>
-                      <For each={dilutions()}>{(d) => <option value={d}>{d}</option>}</For>
-                    </select>
+                    <Show
+                      when={!isCustomRecipe()}
+                      fallback={<input id="customDilution" aria-label="Custom developer dilution" type="text" required placeholder="Required, for example 1+50 or Stock" value={customDilution()} onInput={(e) => setCustomDilution(e.currentTarget.value)} />}
+                    >
+                      <select id="dilSelect" aria-label="Dilution" value={selectedDilution()} onChange={(e) => { setSelectedDilution(e.currentTarget.value); setSelectedRecipeId(""); }} disabled={dilutions().length === 0}>
+                        <option value="">Select dilution</option>
+                        <For each={dilutions()}>{(d) => <option value={d}>{d}</option>}</For>
+                      </select>
+                    </Show>
                   </div>
 
                   <div class="sub-field">
@@ -702,13 +778,35 @@ export default function App() {
                     </select>
                   </div>
 
-                  <div class="sub-field sub-field-full">
-                    <label for="recipeSelect">Recipe Variant</label>
-                    <select id="recipeSelect" value={selectedRecipeId()} onChange={(e) => setSelectedRecipeId(e.currentTarget.value)} disabled={variants().length === 0}>
-                      <option value="">Select recipe</option>
-                      <For each={variants()}>{(r) => <option value={String(r.id)}>{formatRecipeOption(r)}</option>}</For>
-                    </select>
-                  </div>
+                  <Show when={isCustomRecipe()}>
+                    <div class="sub-field">
+                      <label for="customEi">Exposure index *</label>
+                      <input id="customEi" type="number" min="1" step="1" required value={customEi()} onInput={(e) => setCustomEi(e.currentTarget.value)} />
+                    </div>
+                    <div class="sub-field">
+                      <label for="customFormat">Film format *</label>
+                      <select id="customFormat" value={customFormat()} onChange={(e) => setCustomFormat(e.currentTarget.value)}>
+                        <option value="135">35mm</option>
+                        <option value="120">120</option>
+                        <option value="sheet">Sheet</option>
+                        <option value="any">Any format</option>
+                      </select>
+                    </div>
+                    <div class="sub-field sub-field-full">
+                      <label for="customTemperature">Developer temperature (°C) *</label>
+                      <input id="customTemperature" type="number" min="0.1" max="50" step="0.1" required value={customTemperatureC()} onInput={(e) => setCustomTemperatureC(e.currentTarget.value)} />
+                    </div>
+                  </Show>
+
+                  <Show when={!isCustomRecipe()}>
+                    <div class="sub-field sub-field-full">
+                      <label for="recipeSelect">Recipe Variant</label>
+                      <select id="recipeSelect" value={selectedRecipeId()} onChange={(e) => setSelectedRecipeId(e.currentTarget.value)} disabled={variants().length === 0}>
+                        <option value="">Select recipe</option>
+                        <For each={variants()}>{(r) => <option value={String(r.id)}>{formatRecipeOption(r)}</option>}</For>
+                      </select>
+                    </div>
+                  </Show>
 
                   <div class="sub-field sub-field-full">
                     <button class="hint-sub-button" type="button" onClick={() => setActiveHint("agitation")} title="Agitation methods and documentation">Agitation</button>
@@ -721,15 +819,18 @@ export default function App() {
                     </select>
                   </div>
 
-                  <Show when={selectedRecipe()}>
+                  <Show when={effectiveRecipe()}>
                     <div class="sub-field sub-field-full">
-                      <label>Developer Time (mm : ss)</label>
+                      <label>{isCustomRecipe() ? "Custom developer time" : "Developer time"} (mm : ss)</label>
                       <div class="inline-time">
                         <input type="number" min="1" max="120" value={devMinutes()} onInput={(e) => setDevMinutes(e.currentTarget.value)} aria-label="Developer minutes" />
                         <span>:</span>
                         <input type="number" min="0" max="59" value={devSeconds()} onInput={(e) => setDevSeconds(e.currentTarget.value)} aria-label="Developer seconds" />
                       </div>
                     </div>
+                  </Show>
+                  <Show when={customRecipeError()}>
+                    <p class="custom-time-error sub-field-full" role="alert">{customRecipeError()}</p>
                   </Show>
                 </div>
 
@@ -743,7 +844,7 @@ export default function App() {
                         <span>{mix().source}</span>
                       </Show>
                       <span>{mix().metadata}</span>
-                      <Show when={selectedRecipe()?.notes}><span>{selectedRecipe().notes}</span></Show>
+                      <Show when={effectiveRecipe()?.notes}><span>{effectiveRecipe().notes}</span></Show>
                       <Show when={mix().reference}>
                         {(ref) => (
                           <a class="mix-ref-link" href={ref().url} target="_blank" rel="noreferrer">{ref().label}</a>
@@ -991,8 +1092,15 @@ export default function App() {
               <h2>Development process finished.</h2>
               <p>Remove your film from the Photo-Flo bath and hang to dry in a dust-free spot.</p>
             </div>
+            <Show when={isCustomRecipe()}>
+              <div class="submission-prompt">
+                <h3>Do you want to submit this recipe?</h3>
+                <p>Review the film, developer, required dilution, time, temperature, and agitation before opening a draft public GitHub issue.</p>
+                <button class="contribution-button" type="button" onClick={openSubmitModal}>Review recipe submission</button>
+              </div>
+            </Show>
             <button class="primary-button primary-button-inline" type="button" onClick={resetProcess}>
-              Develop another roll
+              {isCustomRecipe() ? "No, develop another roll" : "Develop another roll"}
             </button>
           </section>
         </Show>
@@ -1126,109 +1234,41 @@ export default function App() {
             onKeyDown={handleSubmitDialogKeyDown}
           >
             <div class="crt-dialog-header">
-              <h2 class="crt-dialog-title" id="submit-recipe-title">Submit custom development time</h2>
+              <h2 class="crt-dialog-title" id="submit-recipe-title">Submit this custom recipe</h2>
               <button class="crt-close" type="button" aria-label="Close submission form" onClick={closeSubmitModal}>×</button>
             </div>
             <form class="crt-dialog-body submit-form" onSubmit={handleRecipeIssueSubmit}>
-              <p class="submit-intro" id="submit-recipe-description">
-                Discord can be used to collect the details and permission. This form creates the public GitHub record required by{" "}
-                <a href="https://github.com/mjdelro/darktimer-app/blob/main/CONTRIBUTING.md" target="_blank" rel="noreferrer">CONTRIBUTING.md</a>.
-              </p>
-              <p class="submit-privacy"><strong>Public record:</strong> Do not paste private Discord messages, screenshots, email addresses, or private message URLs. Use the contributor's chosen credit, including “Anonymous” if requested.</p>
+              <p class="submit-privacy" id="submit-recipe-description"><strong>Public record:</strong> Do not paste private Discord messages, screenshots, email addresses, or private message URLs. Use the contributor's chosen credit, including “Anonymous” if requested.</p>
 
-              <div class="submit-grid">
-                <div class="sub-field sub-field-full">
-                  <label for="subType">Source type *</label>
-                  <select
-                    id="subType"
-                    value={subSubmissionType()}
-                    onChange={(event) => {
-                      const nextType = event.currentTarget.value;
-                      setSubSubmissionType(nextType);
-                      setSubSourceTitle(nextType === "community-test" ? "Personal darkroom test log" : "");
-                      setSubUrl("");
-                    }}
-                  >
-                    <For each={SUBMISSION_TYPES}>{(option) => <option value={option.value}>{option.label}</option>}</For>
-                  </select>
-                </div>
-                <div class="sub-field">
-                  <label for="subFilm">Film stock *</label>
-                  <input id="subFilm" type="text" required placeholder="Kodak TRI-X 400" value={subFilm()} onInput={(e) => setSubFilm(e.currentTarget.value)} />
-                </div>
-                <div class="sub-field">
-                  <label for="subDev">Developer *</label>
-                  <input id="subDev" type="text" required placeholder="Kodak D-76" value={subDeveloper()} onInput={(e) => setSubDeveloper(e.currentTarget.value)} />
-                </div>
-                <div class="sub-field">
-                  <label for="subDil">Dilution *</label>
-                  <input id="subDil" type="text" required placeholder="Stock, 1+1, B (1+31)" value={subDilution()} onInput={(e) => setSubDilution(e.currentTarget.value)} />
-                </div>
-                <div class="sub-field">
-                  <label for="subEi">EI (ISO) *</label>
-                  <input id="subEi" type="number" min="1" max="102400" required value={subEi()} onInput={(e) => setSubEi(e.currentTarget.value)} />
-                </div>
-                <div class="sub-field">
-                  <label for="subFormat">Format *</label>
-                  <select id="subFormat" value={subFormat()} onChange={(e) => setSubFormat(e.currentTarget.value)}>
-                    <option value="135">35mm</option>
-                    <option value="120">120</option>
-                    <option value="sheet">Sheet</option>
-                    <option value="any">Any format</option>
-                  </select>
-                </div>
-                <div class="sub-field">
-                  <label for="subTime">Time (mm:ss) *</label>
-                  <input id="subTime" type="text" required pattern="\d{1,3}:[0-5]\d" placeholder="07:30" value={subTime()} onInput={(e) => setSubTime(e.currentTarget.value)} />
-                </div>
-                <div class="sub-field">
-                  <label for="subTemp">Temperature *</label>
-                  <div class="submit-temp-row">
-                    <input id="subTemp" type="number" step="0.1" required value={subTemp()} onInput={(e) => setSubTemp(e.currentTarget.value)} />
-                    <select aria-label="Temperature unit" value={subTempUnit()} onChange={(e) => setSubTempUnit(e.currentTarget.value)}>
-                      <option value="celsius">°C</option>
-                      <option value="fahrenheit">°F</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="sub-field">
-                  <label for="subAgitation">Agitation method *</label>
-                  <select id="subAgitation" value={subAgitation()} onChange={(e) => setSubAgitation(e.currentTarget.value)}>
-                    <For each={AGITATION_SUBMISSION_OPTIONS}>{(option) => <option value={option.value}>{option.label}</option>}</For>
-                  </select>
-                </div>
-                <div class="sub-field sub-field-full">
-                  <label for="subNotes">Process notes or limits (optional, factual only)</label>
-                  <textarea id="subNotes" rows="3" placeholder="Small tank only; not recommended for rotary" value={subNotes()} onInput={(e) => setSubNotes(e.currentTarget.value)} />
-                </div>
+              <dl class="submit-recipe-review" aria-label="Completed custom recipe">
+                <div><dt>Film</dt><dd>{subFilm()}</dd></div>
+                <div><dt>Developer</dt><dd>{subDeveloper()}</dd></div>
+                <div><dt>Dilution</dt><dd>{subDilution()}</dd></div>
+                <div><dt>Time</dt><dd>{subTime()}</dd></div>
+                <div><dt>Temperature</dt><dd>{subTemp()}°C</dd></div>
+                <div><dt>EI / Format</dt><dd>EI {subEi()} · {FORMAT_NAMES[subFormat()] || subFormat()}</dd></div>
+                <div><dt>Submitted</dt><dd>{subDate()}</dd></div>
+                <div class="submit-review-full"><dt>Agitation</dt><dd>{AGITATION_SUBMISSION_OPTIONS.find((option) => option.value === subAgitation())?.label || subAgitation()}</dd></div>
+              </dl>
 
+              <div class="submit-grid submit-grid-compact">
                 <div class="sub-field">
-                  <label for="subDate">Retrieval / Test date *</label>
-                  <input id="subDate" type="date" required value={subDate()} onInput={(e) => setSubDate(e.currentTarget.value)} />
-                </div>
-                <Show when={subSubmissionType() === "community-test"}>
-                  <div class="sub-field">
-                    <label for="subSuccessfulTests">Successful tests *</label>
-                    <input id="subSuccessfulTests" type="number" min="1" step="1" required value={subSuccessfulTests()} onInput={(e) => setSubSuccessfulTests(e.currentTarget.value)} />
-                  </div>
-                </Show>
-                <div class="sub-field">
-                  <label for="subAttribution">{subSubmissionType() === "community-test" ? "Contributor credit" : "Publisher"} *</label>
-                  <input id="subAttribution" type="text" required placeholder={subSubmissionType() === "community-test" ? "Name, Discord handle, or Anonymous" : "Kodak, Ilford Photo, ADOX"} value={subAttribution()} onInput={(e) => setSubAttribution(e.currentTarget.value)} />
+                  <label for="subAttribution">Contributor credit *</label>
+                  <input id="subAttribution" type="text" required placeholder="Name, handle, or Anonymous" value={subAttribution()} onInput={(e) => setSubAttribution(e.currentTarget.value)} />
                 </div>
                 <div class="sub-field">
-                  <label for="subTitle">Source title *</label>
-                  <input id="subTitle" type="text" required placeholder={subSubmissionType() === "community-test" ? "Personal darkroom test log" : "Technical publication title"} value={subSourceTitle()} onInput={(e) => setSubSourceTitle(e.currentTarget.value)} />
+                  <label for="subUrl">Optional public supporting URL</label>
+                  <input id="subUrl" type="url" placeholder="https://..." value={subUrl()} onInput={(e) => setSubUrl(e.currentTarget.value)} />
                 </div>
                 <div class="sub-field sub-field-full">
-                  <label for="subUrl">{subSubmissionType() === "community-test" ? "Optional public supporting URL" : "Manufacturer publication URL"}{subSubmissionType() === "manufacturer-publication" ? " *" : ""}</label>
-                  <input id="subUrl" type="url" required={subSubmissionType() === "manufacturer-publication"} placeholder="https://..." value={subUrl()} onInput={(e) => setSubUrl(e.currentTarget.value)} />
+                  <label for="subNotes">Process notes or limits (optional)</label>
+                  <textarea id="subNotes" rows="3" placeholder="Anything needed to reproduce the result" value={subNotes()} onInput={(e) => setSubNotes(e.currentTarget.value)} />
                 </div>
               </div>
 
               <label class="submit-cert">
                 <input type="checkbox" checked={subCertified()} onChange={(e) => setSubCertified(e.currentTarget.checked)} required />
-                <span>I confirm this comes from my own testing or the named manufacturer publication, not a third-party database or copied user notes. If I am submitting another person's test, I have their written permission. I intentionally submit these factual values and my original notes for inclusion under Apache-2.0.</span>
+                <span>I confirm this recipe comes from my own testing or I have the tester's written permission. It was not copied from a third-party database or user notes. I intentionally submit these factual values and my original notes for inclusion under Apache-2.0.</span>
               </label>
 
               <Show when={submitError()}>

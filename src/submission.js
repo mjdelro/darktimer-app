@@ -83,7 +83,7 @@ export function validateRecipeSubmission(data) {
     [data.dilution, "Enter the dilution."],
     [data.attribution, "Enter a contributor credit or publisher."],
     [data.sourceTitle, "Enter a test-log or publication title."],
-    [data.retrievedDate, "Enter the test or retrieval date."]
+    [data.retrievedDate, "Enter the submission or retrieval date."]
   ];
   const missing = requiredText.find(([value]) => !String(value || "").trim());
   if (missing) return missing[1];
@@ -96,7 +96,7 @@ export function validateRecipeSubmission(data) {
 
   const ei = Number(data.ei);
   if (!Number.isInteger(ei) || ei <= 0) return "Enter a positive whole-number exposure index.";
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(data.retrievedDate || ""))) return "Enter a valid test or retrieval date.";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(data.retrievedDate || ""))) return "Enter a valid submission or retrieval date.";
 
   if (!SUBMISSION_TYPES.some((option) => option.value === data.submissionType)) return "Choose a valid source type.";
   if (!["135", "120", "sheet", "any"].includes(data.format)) return "Choose a valid film format.";
@@ -109,10 +109,6 @@ export function validateRecipeSubmission(data) {
   const type = submissionTypeFor(data.submissionType);
   if (type.value === "manufacturer-publication" && !isHttpsUrl(sourceUrl)) {
     return "Add the manufacturer's public HTTPS source URL.";
-  }
-  if (type.value === "community-test") {
-    const successfulTests = Number(data.successfulTests);
-    if (!Number.isInteger(successfulTests) || successfulTests <= 0) return "Enter at least one successful darkroom test.";
   }
   if (!data.certified) return "Confirm the source, permission, and Apache-2.0 certification.";
   return "";
@@ -153,7 +149,6 @@ export function buildRecipeIssueUrl(data) {
     sourceId: issueSourceId,
     confidence: type.confidence,
     agitation: data.agitation,
-    ...(type.value === "community-test" ? { successfulTests: Number(data.successfulTests) || 1 } : {}),
     ...(String(data.notes || "").trim() ? { notes: String(data.notes).trim() } : {})
   };
 
@@ -174,7 +169,6 @@ export function buildRecipeIssueUrl(data) {
     `| **Temperature** | ${markdownCell(tempDisplay)} |`,
     `| **Agitation** | ${markdownCell(agitationLabel)} |`,
     `| **Process notes or limits** | ${markdownCell(data.notes) || "None"} |`,
-    ...(type.value === "community-test" ? [`| **Successful tests** | ${catalogEntry.successfulTests} |`] : []),
     "",
     "### Source and permission",
     "| Field | Value |",
@@ -183,7 +177,7 @@ export function buildRecipeIssueUrl(data) {
     `| **Contributor credit / publisher** | ${markdownCell(attribution)} |`,
     `| **Title** | ${markdownCell(sourceTitle)} |`,
     `| **Public source URL** | ${markdownCell(data.sourceUrl) || "This GitHub issue"} |`,
-    `| **Test / retrieval date** | ${markdownCell(data.retrievedDate)} |`,
+    `| **${type.value === "community-test" ? "Submission date" : "Retrieval date"}** | ${markdownCell(data.retrievedDate)} |`,
     `| **License basis** | ${markdownCell(type.licenseBasis)} |`,
     "",
     "### Source JSON",
@@ -198,8 +192,12 @@ export function buildRecipeIssueUrl(data) {
     "```",
     "",
     "### Contribution certification",
-    "- [x] I confirm this recipe comes from my own testing or the named manufacturer publication, not from a third-party database, table, or copied user notes.",
-    "- [x] If I am submitting another person's test, I have their written permission to publish it and to use the attribution shown above.",
+    ...(type.value === "community-test"
+      ? [
+          "- [x] I confirm this recipe comes from my own testing or I have the tester's written permission to publish it and use the attribution shown above.",
+          "- [x] This recipe was not copied from a third-party database, table, or user notes."
+        ]
+      : ["- [x] I manually transcribed these minimum factual values from the named manufacturer publication, not from a third-party database or table."]),
     "- [x] I intentionally submit these factual values and any original notes for inclusion in darkTimer under Apache-2.0.",
     "",
     `Submitted by: ${markdownCell(attribution)}`

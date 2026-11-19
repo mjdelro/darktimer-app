@@ -47,7 +47,6 @@ for (const recipe of catalog.recipes) {
     assert.equal(recipe.confidence, "manufacturer-published");
   } else {
     assert.equal(recipe.confidence, "community-reported");
-    assert.ok(Number.isInteger(recipe.successfulTests) && recipe.successfulTests > 0, "Community recipes require a positive successfulTests count");
   }
 
   const key = [recipe.film, recipe.developer, recipe.dilution, recipe.seconds, recipe.temperatureC, recipe.ei || "", recipe.format || "any"].join("|");

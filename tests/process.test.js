@@ -160,15 +160,13 @@ const communitySubmission = {
   submissionType: "community-test",
   attribution: "Anonymous",
   sourceTitle: "Personal darkroom test log",
-  sourceUrl: "",
-  successfulTests: "2"
+  sourceUrl: ""
 };
 assert.equal(validateRecipeSubmission(communitySubmission), "");
-assert.match(validateRecipeSubmission({ ...communitySubmission, successfulTests: "0" }), /at least one successful/);
 assert.match(validateRecipeSubmission({ ...communitySubmission, sourceUrl: "https://discord.com/channels/1/2/3" }), /private Discord/);
 const communityIssueBody = new URL(buildRecipeIssueUrl(communitySubmission)).searchParams.get("body");
 assert.match(communityIssueBody, /"confidence": "community-reported"/);
-assert.match(communityIssueBody, /"successfulTests": 2/);
+assert.match(communityIssueBody, /\*\*Submission date\*\* \| 2026-11-19/);
 assert.match(communityIssueBody, /community-issue-ISSUE_NUMBER/);
 assert.match(communityIssueBody, /written permission to publish/);
 
