@@ -627,7 +627,7 @@ export default function App() {
                   <li><a href="https://www.ilfordphoto.com/amfile/file/download/file/1919/product/689/" target="_blank" rel="noreferrer">Ilford FP4 Plus technical information</a></li>
                 </ul>
               </details>
-              <p class="safety-callout"><strong>Safety:</strong> The manufacturer label and safety data sheet control. Use appropriate protective equipment and ventilation, and follow local disposal rules.</p>
+              <p class="safety-callout"><strong>Safety:</strong> Follow the product label and Safety Data Sheet (SDS) first. Use appropriate PPE, ventilate your workspace, and follow local disposal rules.</p>
 
               <div class="chain-preview">
                 <div class="chain-preview-header">
