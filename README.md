@@ -14,8 +14,8 @@ also be run locally with Node or Docker.
 1. Configures an optional presoak.
 2. Loads a small local catalog of manufacturer-published development times.
 3. Calculates developer and water volumes for supported dilution formats.
-4. Builds an editable process chain for development, stop bath, fixing,
-   hypo-clear, washing, and Photo-Flo.
+4. Builds a process chain with fixed documented presets and explicit Custom
+   controls for stop bath, fixing, washing, and Photo-Flo times.
 5. Runs a chained timer with pour prompts, agitation cues, and audio controls.
 
 Each selected recipe shows its source, confidence classification, and agitation

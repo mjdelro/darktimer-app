@@ -521,6 +521,21 @@ input[type="number"] {
   gap: 12px;
 }
 
+.custom-time-error,
+.custom-time-summary {
+  margin: 0;
+  color: #ff9a8f;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.custom-time-summary {
+  padding: 10px 12px;
+  border-left: 3px solid var(--alert-red);
+  background: rgb(255 43 28 / 8%);
+}
+
 select:hover:not(:disabled),
 input[type="number"]:hover {
   border-color: var(--amber);

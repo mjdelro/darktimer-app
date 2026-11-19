@@ -62,6 +62,7 @@ export const STOP_BATH_OPTIONS = [
   { id: "kodak-indicator", label: "Kodak Indicator Stop Bath (1+63 · 0:30)", seconds: 30, agitation: "continuous", note: "Agitate continuously for 30 seconds, then drain." },
   { id: "water", label: "Water Rinse (2 changes · 1:00)", seconds: 60, agitation: "continuous", note: "Fill with tempered water, invert continuously, drain and repeat." },
   { id: "citric", label: "Citric Acid Stop (1:00)", seconds: 60, agitation: "continuous", note: "Agitate gently for 1 minute, then pour out." },
+  { id: "custom", label: "Custom Stop Bath (set time)", seconds: 30, agitation: "continuous", note: "Use the time and agitation instructions for your stop bath." },
   { id: "none", label: "None (skip stop bath)", seconds: 0, agitation: "continuous", note: "" }
 ];
 
@@ -69,7 +70,8 @@ export const FIXER_OPTIONS = [
   { id: "ilford-rapid", label: "Ilford Rapid Fixer (1+4 · 3:00)", seconds: 180, agitation: "ilford", note: "Rapid ammonium thiosulfate fixer. Invert 4 times per minute." },
   { id: "kodak-rapid", label: "Kodak Rapid Fixer (1+3 · 4:00)", seconds: 240, agitation: "kodak", note: "Agitate 30s initially, then 5s every 30 seconds." },
   { id: "tf4", label: "TF-4 Alkaline Archival Fixer (1+3 · 4:00)", seconds: 240, agitation: "standard", note: "Use a water rinse instead of acid stop. Some films require a longer fixing time; check the current TF-4 label and run a clearing test." },
-  { id: "kodak-powder", label: "Kodak Fixer Powder (Stock · 8:00)", seconds: 480, agitation: "kodak", note: "Conventional sodium thiosulfate fixer. Agitate 5s every 30 seconds." }
+  { id: "kodak-powder", label: "Kodak Fixer Powder (Stock · 8:00)", seconds: 480, agitation: "kodak", note: "Conventional sodium thiosulfate fixer. Agitate 5s every 30 seconds." },
+  { id: "custom", label: "Custom Fixer (set time)", seconds: 300, agitation: "standard", note: "Use the time and agitation instructions for your fixer." }
 ];
 
 export const HYPO_CLEAR_OPTIONS = [
@@ -84,7 +86,8 @@ export const WASH_OPTIONS = [
   { id: "running-5", label: "Running Water Wash (5:00 · with Hypo-Clear) + Photo-Flo", washSeconds: 300, photoFloSeconds: 30, note: "Gentle continuous water exchange at processing temperature." },
   { id: "running-10", label: "Running Water Wash (10:00) + Photo-Flo", washSeconds: 600, photoFloSeconds: 30, note: "Continuous water wash at about 20°C / 68°F." },
   { id: "running-15", label: "Archival Running Wash (15:00) + Photo-Flo", washSeconds: 900, photoFloSeconds: 30, note: "Full archival wash without hypo-clearing agent." },
-  { id: "quick-3", label: "Quick Multi-Change Wash (3:00) + Photo-Flo", washSeconds: 180, photoFloSeconds: 30, note: "Use 3 to 4 complete tank refills with gentle inversions." }
+  { id: "quick-3", label: "Quick Multi-Change Wash (3:00) + Photo-Flo", washSeconds: 180, photoFloSeconds: 30, note: "Use 3 to 4 complete tank refills with gentle inversions." },
+  { id: "custom", label: "Custom Wash + Photo-Flo (set times)", washSeconds: 600, photoFloSeconds: 30, note: "Use the wash method and wetting-agent instructions for your materials." }
 ];
 
 export const NAMED_DILUTION_MIXES = {
@@ -213,7 +216,6 @@ export function buildProcessSteps({
   fixerId = "ilford-rapid",
   fixerSeconds,
   hypoClearId = "none",
-  hypoClearSeconds,
   washId = "ilford-archival",
   washSeconds,
   photoFloSeconds
@@ -246,7 +248,9 @@ export function buildProcessSteps({
   });
 
   const stopOption = STOP_BATH_OPTIONS.find((o) => o.id === stopBathId);
-  const effectiveStopSeconds = stopBathSeconds ?? stopOption?.seconds ?? 0;
+  const effectiveStopSeconds = stopOption?.id === "custom"
+    ? stopBathSeconds ?? stopOption.seconds
+    : stopOption?.seconds ?? 0;
   if (stopOption && stopOption.id !== "none" && effectiveStopSeconds > 0) {
     steps.push({
       id: "stop",
@@ -260,7 +264,9 @@ export function buildProcessSteps({
   }
 
   const fixerOption = FIXER_OPTIONS.find((o) => o.id === fixerId) || FIXER_OPTIONS[0];
-  const effectiveFixerSeconds = fixerSeconds ?? fixerOption.seconds;
+  const effectiveFixerSeconds = fixerOption.id === "custom"
+    ? fixerSeconds ?? fixerOption.seconds
+    : fixerOption.seconds;
   if (effectiveFixerSeconds > 0) {
     steps.push({
       id: "fixer",
@@ -274,7 +280,7 @@ export function buildProcessSteps({
   }
 
   const hypoOption = HYPO_CLEAR_OPTIONS.find((o) => o.id === hypoClearId);
-  const effectiveHypoSeconds = hypoClearSeconds ?? hypoOption?.seconds ?? 0;
+  const effectiveHypoSeconds = hypoOption?.seconds ?? 0;
   if (hypoOption && hypoOption.id !== "none" && effectiveHypoSeconds > 0) {
     steps.push({
       id: "hypo-clear",
@@ -288,7 +294,9 @@ export function buildProcessSteps({
   }
 
   const washOption = WASH_OPTIONS.find((o) => o.id === washId) || WASH_OPTIONS[0];
-  const effectiveWashSeconds = washSeconds ?? washOption.washSeconds;
+  const effectiveWashSeconds = washOption.id === "custom"
+    ? washSeconds ?? washOption.washSeconds
+    : washOption.washSeconds;
   if (effectiveWashSeconds > 0) {
     steps.push({
       id: "wash",
@@ -301,7 +309,9 @@ export function buildProcessSteps({
     });
   }
 
-  const effectivePhotoFloSeconds = photoFloSeconds ?? washOption.photoFloSeconds ?? 30;
+  const effectivePhotoFloSeconds = washOption.id === "custom"
+    ? photoFloSeconds ?? washOption.photoFloSeconds
+    : washOption.photoFloSeconds ?? 30;
   if (effectivePhotoFloSeconds > 0) {
     steps.push({
       id: "photo-flo",

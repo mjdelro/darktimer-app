@@ -5,6 +5,7 @@ import {
   buildProcessSteps,
   calculateMix,
   dilutionMixFor,
+  FIXER_OPTIONS,
   formatTime,
   HYPO_CLEAR_OPTIONS,
   STOP_BATH_OPTIONS,
@@ -33,6 +34,10 @@ assert.equal(AGITATION_PRESETS.rodinal.intervalSeconds, 60);
 assert.equal(STOP_BATH_OPTIONS.find((option) => option.id === "ilfostop").seconds, 10);
 assert.equal(HYPO_CLEAR_OPTIONS.find((option) => option.id === "ilford-washaid").seconds, 150);
 assert.ok(WASH_OPTIONS.every((option) => option.photoFloSeconds === 30));
+assert.equal(STOP_BATH_OPTIONS.filter((option) => option.id === "custom").length, 1);
+assert.equal(FIXER_OPTIONS.filter((option) => option.id === "custom").length, 1);
+assert.equal(WASH_OPTIONS.filter((option) => option.id === "custom").length, 1);
+assert.equal(HYPO_CLEAR_OPTIONS.some((option) => option.id === "custom"), false);
 
 const fullChain = buildProcessSteps({
   presoakEnabled: true,
@@ -54,7 +59,41 @@ const fullChain = buildProcessSteps({
 });
 
 assert.deepEqual(fullChain.map((step) => step.id), ["presoak", "develop", "stop", "fixer", "hypo-clear", "wash", "photo-flo"]);
-assert.deepEqual(fullChain.map((step) => step.seconds), [60, 660, 15, 210, 150, 360, 25]);
+assert.deepEqual(fullChain.map((step) => step.seconds), [60, 660, 10, 180, 120, 300, 30]);
+
+const customChain = buildProcessSteps({
+  presoakEnabled: false,
+  filmName: "Ilford FP4 Plus",
+  developerName: "Rodinal",
+  dilution: "1+50",
+  devSeconds: 900,
+  stopBathId: "custom",
+  stopBathSeconds: 45,
+  fixerId: "custom",
+  fixerSeconds: 330,
+  hypoClearId: "ilford-washaid",
+  washId: "custom",
+  washSeconds: 720,
+  photoFloSeconds: 20
+});
+
+assert.deepEqual(customChain.map((step) => step.id), ["develop", "stop", "fixer", "hypo-clear", "wash", "photo-flo"]);
+assert.deepEqual(customChain.map((step) => step.seconds), [900, 45, 330, 150, 720, 20]);
+assert.match(customChain.find((step) => step.id === "stop").subtitle, /Custom Stop Bath/);
+assert.match(customChain.find((step) => step.id === "fixer").subtitle, /Custom Fixer/);
+assert.match(customChain.find((step) => step.id === "wash").subtitle, /Custom Wash/);
+
+const customWithoutPhotoFlo = buildProcessSteps({
+  presoakEnabled: false,
+  devSeconds: 60,
+  stopBathId: "none",
+  fixerId: "custom",
+  fixerSeconds: 60,
+  washId: "custom",
+  washSeconds: 60,
+  photoFloSeconds: 0
+});
+assert.equal(customWithoutPhotoFlo.some((step) => step.id === "photo-flo"), false);
 
 const minimalChain = buildProcessSteps({
   presoakEnabled: false,

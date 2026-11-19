@@ -35,7 +35,7 @@ function DurationInput(props) {
   const seconds = () => Number(props.seconds) % 60;
   return (
     <div class="stage-time-field" role="group" aria-label={`${props.label} duration`}>
-      <span class="stage-time-label">Time</span>
+      <span class="stage-time-label">{props.displayLabel || "Time"}</span>
       <input
         type="number"
         min="0"
@@ -88,17 +88,16 @@ export default function App() {
 
   // 03 Stop Bath
   const [stopBathId, setStopBathId] = createSignal("ilfostop");
-  const [stopBathSeconds, setStopBathSeconds] = createSignal(10);
+  const [customStopBathSeconds, setCustomStopBathSeconds] = createSignal(30);
   // 04 Fixer
   const [fixerId, setFixerId] = createSignal("ilford-rapid");
-  const [fixerSeconds, setFixerSeconds] = createSignal(180);
+  const [customFixerSeconds, setCustomFixerSeconds] = createSignal(300);
   // 05 Hypo-Clear
   const [hypoClearId, setHypoClearId] = createSignal("none");
-  const [hypoClearSeconds, setHypoClearSeconds] = createSignal(0);
   // 06 Wash & Photo-Flo
   const [washId, setWashId] = createSignal("ilford-archival");
-  const [washSeconds, setWashSeconds] = createSignal(180);
-  const [photoFloSeconds, setPhotoFloSeconds] = createSignal(30);
+  const [customWashSeconds, setCustomWashSeconds] = createSignal(600);
+  const [customPhotoFloSeconds, setCustomPhotoFloSeconds] = createSignal(30);
 
   // Chained timer state
   const [activeSteps, setActiveSteps] = createSignal([]);
@@ -268,14 +267,13 @@ export default function App() {
       devSeconds: totalDevSeconds(),
       devAgitation: devAgitation(),
       stopBathId: stopBathId(),
-      stopBathSeconds: Number(stopBathSeconds()),
+      stopBathSeconds: Number(customStopBathSeconds()),
       fixerId: fixerId(),
-      fixerSeconds: Number(fixerSeconds()),
+      fixerSeconds: Number(customFixerSeconds()),
       hypoClearId: hypoClearId(),
-      hypoClearSeconds: Number(hypoClearSeconds()),
       washId: washId(),
-      washSeconds: Number(washSeconds()),
-      photoFloSeconds: Number(photoFloSeconds())
+      washSeconds: Number(customWashSeconds()),
+      photoFloSeconds: Number(customPhotoFloSeconds())
     })
   );
 
@@ -283,7 +281,16 @@ export default function App() {
     plannedSteps().reduce((sum, step) => sum + step.seconds, 0)
   );
 
-  const canStart = createMemo(() => Boolean(selectedRecipe() && Number(tankCapacity()) > 0));
+  const customTimeError = createMemo(() => {
+    if (stopBathId() === "custom" && Number(customStopBathSeconds()) <= 0) return "Set a custom stop bath time greater than zero.";
+    if (fixerId() === "custom" && Number(customFixerSeconds()) <= 0) return "Set a custom fixer time greater than zero.";
+    if (washId() === "custom" && Number(customWashSeconds()) <= 0) return "Set a custom wash time greater than zero.";
+    return "";
+  });
+
+  const canStart = createMemo(() => Boolean(
+    selectedRecipe() && Number(tankCapacity()) > 0 && !customTimeError()
+  ));
 
   const currentStep = createMemo(() => activeSteps()[stepIndex()] || null);
   const nextStep = createMemo(() => activeSteps()[stepIndex() + 1] || null);
@@ -444,7 +451,7 @@ export default function App() {
               <p>A black-and-white film development timer with dilution mixing math, audio cues, and chained agitation prompts from presoak through Photo-Flo.</p>
               <ol class="setup-howto">
                 <li>Choose presoak, film, developer, dilution, and tank capacity to calculate your developer and water mix.</li>
-                <li>Pick your recipe, stop bath, fixer, hypo-clear, and wash stages, adjusting times if needed.</li>
+                <li>Pick your recipe and processing stages. Choose a Custom option when you need a different stage time.</li>
                 <li>Press <strong>Start Development Process</strong> and follow the VFD timer, agitation pips, and pour prompts between stages.</li>
               </ol>
 
@@ -643,15 +650,14 @@ export default function App() {
                     <label class="stage-label" for="stopSelect"><span class="stage-num">04</span></label>
                     <button class="stage-hint-button" type="button" onClick={() => setActiveHint("stop")} title="Stop bath guide & references">Stop Bath</button>
                   </div>
-                  <select id="stopSelect" aria-label="Stop Bath" value={stopBathId()} onChange={(e) => {
-                    const option = STOP_BATH_OPTIONS.find((item) => item.id === e.currentTarget.value);
-                    setStopBathId(e.currentTarget.value);
-                    setStopBathSeconds(option?.seconds ?? 0);
-                  }}>
+                  <select id="stopSelect" aria-label="Stop Bath" value={stopBathId()} onChange={(e) => setStopBathId(e.currentTarget.value)}>
                     <For each={STOP_BATH_OPTIONS}>{(o) => <option value={o.id}>{o.label}</option>}</For>
                   </select>
                 </div>
-                <Show when={stopBathId() !== "none"}><DurationInput label="Stop bath" seconds={stopBathSeconds()} onChange={setStopBathSeconds} /></Show>
+                <Show when={stopBathId() === "custom"}>
+                  <DurationInput label="Custom stop bath" seconds={customStopBathSeconds()} onChange={setCustomStopBathSeconds} />
+                  <Show when={Number(customStopBathSeconds()) <= 0}><p class="custom-time-error" role="alert">Set a time greater than zero.</p></Show>
+                </Show>
               </div>
 
               {/* 05 Fixer */}
@@ -661,15 +667,14 @@ export default function App() {
                     <label class="stage-label" for="fixerSelect"><span class="stage-num">05</span></label>
                     <button class="stage-hint-button" type="button" onClick={() => setActiveHint("fixer")} title="Fixer guide & references">Fixer</button>
                   </div>
-                  <select id="fixerSelect" aria-label="Fixer" value={fixerId()} onChange={(e) => {
-                    const option = FIXER_OPTIONS.find((item) => item.id === e.currentTarget.value);
-                    setFixerId(e.currentTarget.value);
-                    setFixerSeconds(option?.seconds ?? 0);
-                  }}>
+                  <select id="fixerSelect" aria-label="Fixer" value={fixerId()} onChange={(e) => setFixerId(e.currentTarget.value)}>
                     <For each={FIXER_OPTIONS}>{(o) => <option value={o.id}>{o.label}</option>}</For>
                   </select>
                 </div>
-                <DurationInput label="Fixer" seconds={fixerSeconds()} onChange={setFixerSeconds} />
+                <Show when={fixerId() === "custom"}>
+                  <DurationInput label="Custom fixer" seconds={customFixerSeconds()} onChange={setCustomFixerSeconds} />
+                  <Show when={Number(customFixerSeconds()) <= 0}><p class="custom-time-error" role="alert">Set a time greater than zero.</p></Show>
+                </Show>
               </div>
 
               {/* 06 Hypo-Clear */}
@@ -679,36 +684,30 @@ export default function App() {
                     <label class="stage-label" for="hypoSelect"><span class="stage-num">06</span></label>
                     <button class="stage-hint-button" type="button" onClick={() => setActiveHint("hypo")} title="Hypo-clear guide & references">Hypo-Clear</button>
                   </div>
-                  <select id="hypoSelect" aria-label="Hypo-Clear" value={hypoClearId()} onChange={(e) => {
-                    const option = HYPO_CLEAR_OPTIONS.find((item) => item.id === e.currentTarget.value);
-                    setHypoClearId(e.currentTarget.value);
-                    setHypoClearSeconds(option?.seconds ?? 0);
-                  }}>
+                  <select id="hypoSelect" aria-label="Hypo-Clear" value={hypoClearId()} onChange={(e) => setHypoClearId(e.currentTarget.value)}>
                     <For each={HYPO_CLEAR_OPTIONS}>{(o) => <option value={o.id}>{o.label}</option>}</For>
                   </select>
                 </div>
-                <Show when={hypoClearId() !== "none"}><DurationInput label="Hypo-clear" seconds={hypoClearSeconds()} onChange={setHypoClearSeconds} /></Show>
               </div>
 
               {/* 07 Wash + Photo-Flo */}
               <div class="stage-card">
                 <div class="stage-row">
                   <label class="stage-label" for="washSelect"><span class="stage-num">07</span> Wash</label>
-                  <select id="washSelect" value={washId()} onChange={(e) => {
-                    const option = WASH_OPTIONS.find((item) => item.id === e.currentTarget.value);
-                    setWashId(e.currentTarget.value);
-                    setWashSeconds(option?.washSeconds ?? 0);
-                    setPhotoFloSeconds(option?.photoFloSeconds ?? 30);
-                  }}>
+                  <select id="washSelect" value={washId()} onChange={(e) => setWashId(e.currentTarget.value)}>
                     <For each={WASH_OPTIONS}>{(o) => <option value={o.id}>{o.label}</option>}</For>
                   </select>
                 </div>
-                <div class="stage-time-grid">
-                  <DurationInput label="Wash" seconds={washSeconds()} onChange={setWashSeconds} />
-                  <DurationInput label="Photo-Flo" seconds={photoFloSeconds()} onChange={setPhotoFloSeconds} />
-                </div>
+                <Show when={washId() === "custom"}>
+                  <div class="stage-time-grid">
+                    <DurationInput label="Custom wash" displayLabel="Wash" seconds={customWashSeconds()} onChange={setCustomWashSeconds} />
+                    <DurationInput label="Custom Photo-Flo" displayLabel="Photo-Flo" seconds={customPhotoFloSeconds()} onChange={setCustomPhotoFloSeconds} />
+                  </div>
+                  <Show when={Number(customWashSeconds()) <= 0}><p class="custom-time-error" role="alert">Set a wash time greater than zero. Set Photo-Flo to zero to omit that step.</p></Show>
+                </Show>
               </div>
 
+              <Show when={customTimeError()}><p class="custom-time-summary" role="alert">{customTimeError()}</p></Show>
               <button class="primary-button" type="submit" disabled={!canStart()}>
                 Start Development Process
               </button>
