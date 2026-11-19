@@ -18,9 +18,8 @@ import { playDing, playStepComplete, playTick } from "./audio.js";
 import {
   AGITATION_SUBMISSION_OPTIONS,
   buildRecipeIssueUrl,
-  CONFIDENCE_OPTIONS,
-  LICENSE_BASIS_OPTIONS,
-  parseTimeToSeconds
+  SUBMISSION_TYPES,
+  validateRecipeSubmission
 } from "./submission.js";
 
 const FORMAT_NAMES = { any: "Any format", "135": "35mm", "120": "120", sheet: "Sheet" };
@@ -33,9 +32,12 @@ const DEVELOPER_REFERENCE_LINKS = {
   "Rodinal": { url: "https://www.adox.de/adox-chemie/adox-filmentwickler/rodinal-adonal/", label: "Reference: ADOX Rodinal / Adonal guide" }
 };
 
-const confidenceLabel = (confidence) => confidence === "manufacturer-published"
-  ? "Manufacturer-published time"
-  : confidence || "Source status unknown";
+const CONFIDENCE_LABELS = {
+  "manufacturer-published": "Manufacturer-published time",
+  "community-reported": "Community-reported time"
+};
+
+const confidenceLabel = (confidence) => CONFIDENCE_LABELS[confidence] || "Source status unknown";
 
 function DurationInput(props) {
   const minutes = () => Math.floor(Number(props.seconds) / 60);
@@ -74,21 +76,29 @@ export default function App() {
   const [subDeveloper, setSubDeveloper] = createSignal("");
   const [subDilution, setSubDilution] = createSignal("");
   const [subEi, setSubEi] = createSignal("400");
-  const [subFormat, setSubFormat] = createSignal("35mm");
+  const [subFormat, setSubFormat] = createSignal("135");
   const [subTime, setSubTime] = createSignal("07:30");
   const [subTemp, setSubTemp] = createSignal("20");
   const [subTempUnit, setSubTempUnit] = createSignal("celsius");
-  const [subAgitation, setSubAgitation] = createSignal(AGITATION_SUBMISSION_OPTIONS[0]);
-  const [subLimits, setSubLimits] = createSignal("");
-  const [subConfidence, setSubConfidence] = createSignal(CONFIDENCE_OPTIONS[0]);
-  const [subPublisher, setSubPublisher] = createSignal("");
-  const [subTitle, setSubTitle] = createSignal("");
+  const [subAgitation, setSubAgitation] = createSignal(AGITATION_SUBMISSION_OPTIONS[0].value);
+  const [subNotes, setSubNotes] = createSignal("");
+  const [subSubmissionType, setSubSubmissionType] = createSignal(SUBMISSION_TYPES[0].value);
+  const [subAttribution, setSubAttribution] = createSignal("");
+  const [subSourceTitle, setSubSourceTitle] = createSignal("Personal darkroom test log");
   const [subUrl, setSubUrl] = createSignal("");
   const [subDate, setSubDate] = createSignal(new Date().toISOString().slice(0, 10));
-  const [subLicense, setSubLicense] = createSignal(LICENSE_BASIS_OPTIONS[0]);
+  const [subSuccessfulTests, setSubSuccessfulTests] = createSignal("1");
   const [subCertified, setSubCertified] = createSignal(false);
-  const [subSignoff, setSubSignoff] = createSignal("");
   const [activeHint, setActiveHint] = createSignal(null); // "dilution" | "tank" | "agitation" | null
+  let submitModalTrigger;
+  let submitDialog;
+
+  createEffect(() => {
+    if (!showSubmitModal()) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    onCleanup(() => { document.body.style.overflow = previousOverflow; });
+  });
 
   // Catalog state
   const [catalogMode, setCatalogMode] = createSignal("loading");
@@ -437,20 +447,40 @@ export default function App() {
     setSubTempUnit(tempUnit());
     setSubTemp(tempUnit() === "fahrenheit" ? "68" : "20");
     setShowSubmitModal(true);
+    queueMicrotask(() => submitDialog?.querySelector("#subType")?.focus());
+  }
+
+  function closeSubmitModal() {
+    setShowSubmitModal(false);
+    queueMicrotask(() => submitModalTrigger?.focus());
+  }
+
+  function handleSubmitDialogKeyDown(event) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeSubmitModal();
+      return;
+    }
+    if (event.key !== "Tab" || !submitDialog) return;
+
+    const focusable = [...submitDialog.querySelectorAll(
+      "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])"
+    )].filter((element) => !element.hidden && element.getAttribute("aria-hidden") !== "true");
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
   }
 
   function handleRecipeIssueSubmit(e) {
     e.preventDefault();
-    if (!parseTimeToSeconds(subTime())) {
-      setSubmitError("Enter development time in mm:ss format (for example 07:30).");
-      return;
-    }
-    if (!subCertified()) {
-      setSubmitError("Please check the Apache-2.0 and non-scraping certification box.");
-      return;
-    }
-    setSubmitError("");
-    const issueUrl = buildRecipeIssueUrl({
+    const submission = {
       film: subFilm(),
       developer: subDeveloper(),
       dilution: subDilution(),
@@ -460,17 +490,24 @@ export default function App() {
       temperature: subTemp(),
       temperatureUnit: subTempUnit(),
       agitation: subAgitation(),
-      limits: subLimits(),
-      confidence: subConfidence(),
-      publisher: subPublisher(),
-      title: subTitle(),
+      notes: subNotes(),
+      submissionType: subSubmissionType(),
+      attribution: subAttribution(),
+      sourceTitle: subSourceTitle(),
       sourceUrl: subUrl(),
       retrievedDate: subDate(),
-      licenseBasis: subLicense(),
-      signoff: subSignoff()
-    });
+      successfulTests: subSuccessfulTests(),
+      certified: subCertified()
+    };
+    const error = validateRecipeSubmission(submission);
+    if (error) {
+      setSubmitError(error);
+      return;
+    }
+    setSubmitError("");
+    const issueUrl = buildRecipeIssueUrl(submission);
     window.open(issueUrl, "_blank", "noopener,noreferrer");
-    setShowSubmitModal(false);
+    closeSubmitModal();
   }
 
   function resetProcess() {
@@ -528,7 +565,7 @@ export default function App() {
 
               <details class="data-note">
                 <summary>About these times</summary>
-                <p>The local catalog contains a small set of times manually transcribed from the named Kodak and Ilford technical publications. Each selected recipe shows its source, confidence, and agitation method. Always check the linked publication and the current chemistry label before processing important negatives.</p>
+                <p>The local catalog contains manufacturer-published times and may include clearly labeled community reports. Each selected recipe shows its source, confidence, and agitation method. Always check the linked source and the current chemistry label before processing important negatives.</p>
                 <ul>
                   <li><a href="https://www.kodakprofessional.com/sites/default/files/wysiwyg/pro/resources/edbwf_0.pdf" target="_blank" rel="noreferrer">Kodak black-and-white processing data (ED-BWF, March 2023)</a></li>
                   <li><a href="https://business.kodakmoments.com/sites/default/files/wysiwyg/pro/chemistry/j24.pdf" target="_blank" rel="noreferrer">Kodak HC-110 Developer technical data and dilutions (J-24)</a></li>
@@ -538,8 +575,8 @@ export default function App() {
                   <li><a href="https://www.ilfordphoto.com/amfile/file/download/file/1919/product/689/" target="_blank" rel="noreferrer">Ilford FP4 Plus technical information</a></li>
                 </ul>
               </details>
-              <button class="contribution-button" type="button" onClick={openSubmitModal}>
-                Submit custom development times
+              <button ref={submitModalTrigger} class="contribution-button" type="button" onClick={openSubmitModal}>
+                Submit a development time
               </button>
               <p class="safety-callout"><strong>Safety:</strong> The manufacturer label and safety data sheet control. Use appropriate protective equipment and ventilation, and follow local disposal rules.</p>
 
@@ -1076,24 +1113,45 @@ export default function App() {
       <Show when={showSubmitModal()}>
         <div
           class="crt-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="submit-recipe-title"
-          onClick={(e) => { if (e.target === e.currentTarget) setShowSubmitModal(false); }}
-          onKeyDown={(e) => { if (e.key === "Escape") setShowSubmitModal(false); }}
+          onClick={(event) => { if (event.target === event.currentTarget) closeSubmitModal(); }}
         >
-          <div class="crt-dialog crt-dialog-wide">
+          <div
+            ref={submitDialog}
+            class="crt-dialog crt-dialog-wide"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="submit-recipe-title"
+            aria-describedby="submit-recipe-description"
+            tabIndex="-1"
+            onKeyDown={handleSubmitDialogKeyDown}
+          >
             <div class="crt-dialog-header">
               <h2 class="crt-dialog-title" id="submit-recipe-title">Submit custom development time</h2>
-              <button class="crt-close" type="button" aria-label="Close submission form" onClick={() => setShowSubmitModal(false)}>×</button>
+              <button class="crt-close" type="button" aria-label="Close submission form" onClick={closeSubmitModal}>×</button>
             </div>
             <form class="crt-dialog-body submit-form" onSubmit={handleRecipeIssueSubmit}>
-              <p class="submit-intro">
-                Opens a pre-filled GitHub Issue on <strong>mjdelro/darktimer-app</strong> formatted per{" "}
-                <a href="https://github.com/mjdelro/darktimer-app/blob/main/CONTRIBUTING.md" target="_blank" rel="noreferrer">CONTRIBUTING.md</a> (Apache-2.0).
+              <p class="submit-intro" id="submit-recipe-description">
+                Discord can be used to collect the details and permission. This form creates the public GitHub record required by{" "}
+                <a href="https://github.com/mjdelro/darktimer-app/blob/main/CONTRIBUTING.md" target="_blank" rel="noreferrer">CONTRIBUTING.md</a>.
               </p>
+              <p class="submit-privacy"><strong>Public record:</strong> Do not paste private Discord messages, screenshots, email addresses, or private message URLs. Use the contributor's chosen credit, including “Anonymous” if requested.</p>
 
               <div class="submit-grid">
+                <div class="sub-field sub-field-full">
+                  <label for="subType">Source type *</label>
+                  <select
+                    id="subType"
+                    value={subSubmissionType()}
+                    onChange={(event) => {
+                      const nextType = event.currentTarget.value;
+                      setSubSubmissionType(nextType);
+                      setSubSourceTitle(nextType === "community-test" ? "Personal darkroom test log" : "");
+                      setSubUrl("");
+                    }}
+                  >
+                    <For each={SUBMISSION_TYPES}>{(option) => <option value={option.value}>{option.label}</option>}</For>
+                  </select>
+                </div>
                 <div class="sub-field">
                   <label for="subFilm">Film stock *</label>
                   <input id="subFilm" type="text" required placeholder="Kodak TRI-X 400" value={subFilm()} onInput={(e) => setSubFilm(e.currentTarget.value)} />
@@ -1113,7 +1171,7 @@ export default function App() {
                 <div class="sub-field">
                   <label for="subFormat">Format *</label>
                   <select id="subFormat" value={subFormat()} onChange={(e) => setSubFormat(e.currentTarget.value)}>
-                    <option value="35mm">35mm</option>
+                    <option value="135">35mm</option>
                     <option value="120">120</option>
                     <option value="sheet">Sheet</option>
                     <option value="any">Any format</option>
@@ -1136,59 +1194,49 @@ export default function App() {
                 <div class="sub-field">
                   <label for="subAgitation">Agitation method *</label>
                   <select id="subAgitation" value={subAgitation()} onChange={(e) => setSubAgitation(e.currentTarget.value)}>
-                    <For each={AGITATION_SUBMISSION_OPTIONS}>{(opt) => <option value={opt}>{opt}</option>}</For>
+                    <For each={AGITATION_SUBMISSION_OPTIONS}>{(option) => <option value={option.value}>{option.label}</option>}</For>
                   </select>
                 </div>
                 <div class="sub-field sub-field-full">
-                  <label for="subLimits">Format / EI / Agitation limits (optional, factual only)</label>
-                  <input id="subLimits" type="text" placeholder="e.g. Small tank only; not recommended for rotary" value={subLimits()} onInput={(e) => setSubLimits(e.currentTarget.value)} />
+                  <label for="subNotes">Process notes or limits (optional, factual only)</label>
+                  <textarea id="subNotes" rows="3" placeholder="Small tank only; not recommended for rotary" value={subNotes()} onInput={(e) => setSubNotes(e.currentTarget.value)} />
                 </div>
 
-                <div class="sub-field">
-                  <label for="subConfidence">Confidence *</label>
-                  <select id="subConfidence" value={subConfidence()} onChange={(e) => setSubConfidence(e.currentTarget.value)}>
-                    <For each={CONFIDENCE_OPTIONS}>{(opt) => <option value={opt}>{opt}</option>}</For>
-                  </select>
-                </div>
                 <div class="sub-field">
                   <label for="subDate">Retrieval / Test date *</label>
                   <input id="subDate" type="date" required value={subDate()} onInput={(e) => setSubDate(e.currentTarget.value)} />
                 </div>
+                <Show when={subSubmissionType() === "community-test"}>
+                  <div class="sub-field">
+                    <label for="subSuccessfulTests">Successful tests *</label>
+                    <input id="subSuccessfulTests" type="number" min="1" step="1" required value={subSuccessfulTests()} onInput={(e) => setSubSuccessfulTests(e.currentTarget.value)} />
+                  </div>
+                </Show>
                 <div class="sub-field">
-                  <label for="subPublisher">Source publisher *</label>
-                  <input id="subPublisher" type="text" required placeholder="Kodak Alaris, HARMAN, or your name" value={subPublisher()} onInput={(e) => setSubPublisher(e.currentTarget.value)} />
+                  <label for="subAttribution">{subSubmissionType() === "community-test" ? "Contributor credit" : "Publisher"} *</label>
+                  <input id="subAttribution" type="text" required placeholder={subSubmissionType() === "community-test" ? "Name, Discord handle, or Anonymous" : "Kodak, Ilford Photo, ADOX"} value={subAttribution()} onInput={(e) => setSubAttribution(e.currentTarget.value)} />
                 </div>
                 <div class="sub-field">
                   <label for="subTitle">Source title *</label>
-                  <input id="subTitle" type="text" required placeholder="Publication title or Personal test log" value={subTitle()} onInput={(e) => setSubTitle(e.currentTarget.value)} />
+                  <input id="subTitle" type="text" required placeholder={subSubmissionType() === "community-test" ? "Personal darkroom test log" : "Technical publication title"} value={subSourceTitle()} onInput={(e) => setSubSourceTitle(e.currentTarget.value)} />
                 </div>
                 <div class="sub-field sub-field-full">
-                  <label for="subUrl">Stable source URL (manufacturer PDF / page, optional)</label>
-                  <input id="subUrl" type="url" placeholder="https://..." value={subUrl()} onInput={(e) => setSubUrl(e.currentTarget.value)} />
-                </div>
-                <div class="sub-field sub-field-full">
-                  <label for="subLicense">License basis *</label>
-                  <select id="subLicense" value={subLicense()} onChange={(e) => setSubLicense(e.currentTarget.value)}>
-                    <For each={LICENSE_BASIS_OPTIONS}>{(opt) => <option value={opt}>{opt}</option>}</For>
-                  </select>
-                </div>
-                <div class="sub-field sub-field-full">
-                  <label for="subSignoff">DCO Sign-off (Name &lt;email&gt;) *</label>
-                  <input id="subSignoff" type="text" required placeholder="Your Name <you@example.com>" value={subSignoff()} onInput={(e) => setSubSignoff(e.currentTarget.value)} />
+                  <label for="subUrl">{subSubmissionType() === "community-test" ? "Optional public supporting URL" : "Manufacturer publication URL"}{subSubmissionType() === "manufacturer-publication" ? " *" : ""}</label>
+                  <input id="subUrl" type="url" required={subSubmissionType() === "manufacturer-publication"} placeholder="https://..." value={subUrl()} onInput={(e) => setSubUrl(e.currentTarget.value)} />
                 </div>
               </div>
 
               <label class="submit-cert">
                 <input type="checkbox" checked={subCertified()} onChange={(e) => setSubCertified(e.currentTarget.checked)} required />
-                <span>I certify this contains only minimum factual fields, does not scrape or copy any third-party database, table, layout, or user notes without a written license, and I have the right to contribute it under Apache-2.0.</span>
+                <span>I confirm this comes from my own testing or the named manufacturer publication, not a third-party database or copied user notes. If I am submitting another person's test, I have their written permission. I intentionally submit these factual values and my original notes for inclusion under Apache-2.0.</span>
               </label>
 
               <Show when={submitError()}>
-                <p class="submit-error" role="alert">{submitError()}</p>
+                <p class="submit-error" id="submit-recipe-error" role="alert">{submitError()}</p>
               </Show>
 
               <button class="primary-button" type="submit">
-                Open GitHub Issue
+                Open draft GitHub issue
               </button>
             </form>
           </div>

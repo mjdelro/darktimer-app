@@ -1,11 +1,12 @@
 {
-  "version": 2,
+  "version": 3,
   "updated": "2026-11-19",
   "license": "Apache-2.0",
   "scope": "Project-authored transcription and factual selection only; source publications, product names, and trademarks remain subject to their owners' rights.",
   "sources": [
     {
       "id": "kodak-ed-bwf-2023-03",
+      "kind": "manufacturer-publication",
       "title": "Kodak Processing Black-and-White Films (ED-BWF, March 2023)",
       "publisher": "Kodak",
       "url": "https://www.kodakprofessional.com/sites/default/files/wysiwyg/pro/resources/edbwf_0.pdf",
@@ -14,6 +15,7 @@
     },
     {
       "id": "ilford-fp4-plus-tech",
+      "kind": "manufacturer-publication",
       "title": "Ilford FP4 Plus Technical Information",
       "publisher": "Ilford Photo",
       "url": "https://www.ilfordphoto.com/amfile/file/download/file/1919/product/689/",

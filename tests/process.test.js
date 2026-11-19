@@ -11,7 +11,7 @@ import {
   STOP_BATH_OPTIONS,
   WASH_OPTIONS
 } from "../src/process.js";
-import { buildRecipeIssueUrl, parseTempToC, parseTimeToSeconds } from "../src/submission.js";
+import { buildRecipeIssueUrl, parseTempToC, parseTimeToSeconds, validateRecipeSubmission } from "../src/submission.js";
 
 assert.equal(formatTime(90), "01:30");
 assert.equal(formatTime(0), "00:00");
@@ -119,28 +119,57 @@ assert.deepEqual(agitationMarkersFor(300, "rodinal").map((marker) => marker.atSe
 assert.equal(parseTimeToSeconds("07:30"), 450);
 assert.equal(parseTimeToSeconds("bad"), null);
 assert.equal(parseTempToC("68", "fahrenheit"), 20);
-const issueUrl = buildRecipeIssueUrl({
+const manufacturerSubmission = {
   film: "Kodak TRI-X 400",
   developer: "Kodak D-76",
   dilution: "1+1",
   ei: "400",
-  format: "35mm",
+  format: "135",
   time: "09:45",
   temperature: "68",
   temperatureUnit: "fahrenheit",
-  agitation: "Kodak (30s + 5s / 30s)",
-  limits: "Small tank only",
-  confidence: "Manufacturer datasheet",
-  publisher: "Kodak Alaris",
-  title: "Kodak ED-BWF",
+  agitation: "kodak",
+  notes: "Small tank only",
+  submissionType: "manufacturer-publication",
+  attribution: "Kodak",
+  sourceTitle: "Kodak ED-BWF",
   sourceUrl: "https://www.kodakprofessional.com/sites/default/files/wysiwyg/pro/resources/edbwf_0.pdf",
   retrievedDate: "2026-11-19",
-  licenseBasis: "Minimum factual values from manufacturer technical publication",
-  signoff: "Jane Doe <jane@example.com>"
-});
+  certified: true
+};
+assert.equal(validateRecipeSubmission(manufacturerSubmission), "");
+assert.match(validateRecipeSubmission({ ...manufacturerSubmission, sourceUrl: "" }), /public HTTPS source URL/);
+
+const issueUrl = buildRecipeIssueUrl(manufacturerSubmission);
 assert.ok(issueUrl.startsWith("https://github.com/mjdelro/darktimer-app/issues/new?"));
 const parsedIssue = new URL(issueUrl);
 assert.equal(parsedIssue.searchParams.get("labels"), "recipe-submission");
-assert.ok(parsedIssue.searchParams.get("body").includes("Signed-off-by: Jane Doe <jane@example.com>"));
+assert.match(parsedIssue.searchParams.get("body"), /"confidence": "manufacturer-published"/);
+assert.match(parsedIssue.searchParams.get("body"), /"format": "135"/);
+assert.match(parsedIssue.searchParams.get("body"), /"agitation": "kodak"/);
+
+const communitySubmission = {
+  ...manufacturerSubmission,
+  film: "Ilford HP5 Plus",
+  developer: "Rodinal",
+  dilution: "1+50",
+  time: "13:00",
+  temperature: "20",
+  temperatureUnit: "celsius",
+  agitation: "rodinal",
+  submissionType: "community-test",
+  attribution: "Anonymous",
+  sourceTitle: "Personal darkroom test log",
+  sourceUrl: "",
+  successfulTests: "2"
+};
+assert.equal(validateRecipeSubmission(communitySubmission), "");
+assert.match(validateRecipeSubmission({ ...communitySubmission, successfulTests: "0" }), /at least one successful/);
+assert.match(validateRecipeSubmission({ ...communitySubmission, sourceUrl: "https://discord.com/channels/1/2/3" }), /private Discord/);
+const communityIssueBody = new URL(buildRecipeIssueUrl(communitySubmission)).searchParams.get("body");
+assert.match(communityIssueBody, /"confidence": "community-reported"/);
+assert.match(communityIssueBody, /"successfulTests": 2/);
+assert.match(communityIssueBody, /community-issue-ISSUE_NUMBER/);
+assert.match(communityIssueBody, /written permission to publish/);
 
 console.log("Development process tests passed.");

@@ -12,7 +12,8 @@ also be run locally with Node or Docker.
 ## What it does
 
 1. Configures an optional presoak.
-2. Loads a small local catalog of manufacturer-published development times.
+2. Loads a small local catalog of manufacturer-published and clearly labeled
+   community-reported development times.
 3. Calculates developer and water volumes for supported dilution formats.
 4. Builds a process chain with fixed documented presets and explicit Custom
    controls for stop bath, fixing, washing, and Photo-Flo times.
@@ -22,6 +23,11 @@ Each selected recipe shows its source, confidence classification, and agitation
 method. The catalog deliberately excludes the former bulk developer datasets and
 does not call the 35mm.org API while their redistribution or API terms remain
 unclear. See [DATA_SOURCES.md](DATA_SOURCES.md) for provenance.
+
+The in-app submission form turns an original darkroom test or a manufacturer
+publication into a draft public GitHub issue. Community reports remain labeled
+`community-reported`, require contributor permission and a successful-test
+count, and are never presented as manufacturer data.
 
 ## Safety
 
