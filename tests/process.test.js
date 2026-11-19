@@ -11,6 +11,7 @@ import {
   STOP_BATH_OPTIONS,
   WASH_OPTIONS
 } from "../src/process.js";
+import { buildRecipeIssueUrl, parseTempToC, parseTimeToSeconds } from "../src/submission.js";
 
 assert.equal(formatTime(90), "01:30");
 assert.equal(formatTime(0), "00:00");
@@ -114,5 +115,32 @@ assert.equal(minimalChain.at(-1).seconds, 30);
 assert.deepEqual(agitationMarkersFor(300, "standard").map((marker) => marker.atSeconds), [0, 60, 120, 180, 240]);
 assert.deepEqual(agitationMarkersFor(1800, "stand").map((marker) => marker.atSeconds), [0]);
 assert.deepEqual(agitationMarkersFor(300, "rodinal").map((marker) => marker.atSeconds), [0, 60, 120, 180, 240]);
+
+assert.equal(parseTimeToSeconds("07:30"), 450);
+assert.equal(parseTimeToSeconds("bad"), null);
+assert.equal(parseTempToC("68", "fahrenheit"), 20);
+const issueUrl = buildRecipeIssueUrl({
+  film: "Kodak TRI-X 400",
+  developer: "Kodak D-76",
+  dilution: "1+1",
+  ei: "400",
+  format: "35mm",
+  time: "09:45",
+  temperature: "68",
+  temperatureUnit: "fahrenheit",
+  agitation: "Kodak (30s + 5s / 30s)",
+  limits: "Small tank only",
+  confidence: "Manufacturer datasheet",
+  publisher: "Kodak Alaris",
+  title: "Kodak ED-BWF",
+  sourceUrl: "https://www.kodakprofessional.com/sites/default/files/wysiwyg/pro/resources/edbwf_0.pdf",
+  retrievedDate: "2026-11-19",
+  licenseBasis: "Minimum factual values from manufacturer technical publication",
+  signoff: "Jane Doe <jane@example.com>"
+});
+assert.ok(issueUrl.startsWith("https://github.com/mjdelro/darktimer-app/issues/new?"));
+const parsedIssue = new URL(issueUrl);
+assert.equal(parsedIssue.searchParams.get("labels"), "recipe-submission");
+assert.ok(parsedIssue.searchParams.get("body").includes("Signed-off-by: Jane Doe <jane@example.com>"));
 
 console.log("Development process tests passed.");

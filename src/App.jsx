@@ -15,6 +15,13 @@ import {
   WASH_OPTIONS
 } from "./process.js";
 import { playDing, playStepComplete, playTick } from "./audio.js";
+import {
+  AGITATION_SUBMISSION_OPTIONS,
+  buildRecipeIssueUrl,
+  CONFIDENCE_OPTIONS,
+  LICENSE_BASIS_OPTIONS,
+  parseTimeToSeconds
+} from "./submission.js";
 
 const FORMAT_NAMES = { any: "Any format", "135": "35mm", "120": "120", sheet: "Sheet" };
 
@@ -61,6 +68,26 @@ export default function App() {
   const [screen, setScreen] = createSignal("setup"); // setup | timer | complete
   const [tempUnit, setTempUnit] = createSignal("fahrenheit");
   const [soundEnabled, setSoundEnabled] = createSignal(true);
+  const [showSubmitModal, setShowSubmitModal] = createSignal(false);
+  const [submitError, setSubmitError] = createSignal("");
+  const [subFilm, setSubFilm] = createSignal("");
+  const [subDeveloper, setSubDeveloper] = createSignal("");
+  const [subDilution, setSubDilution] = createSignal("");
+  const [subEi, setSubEi] = createSignal("400");
+  const [subFormat, setSubFormat] = createSignal("35mm");
+  const [subTime, setSubTime] = createSignal("07:30");
+  const [subTemp, setSubTemp] = createSignal("20");
+  const [subTempUnit, setSubTempUnit] = createSignal("celsius");
+  const [subAgitation, setSubAgitation] = createSignal(AGITATION_SUBMISSION_OPTIONS[0]);
+  const [subLimits, setSubLimits] = createSignal("");
+  const [subConfidence, setSubConfidence] = createSignal(CONFIDENCE_OPTIONS[0]);
+  const [subPublisher, setSubPublisher] = createSignal("");
+  const [subTitle, setSubTitle] = createSignal("");
+  const [subUrl, setSubUrl] = createSignal("");
+  const [subDate, setSubDate] = createSignal(new Date().toISOString().slice(0, 10));
+  const [subLicense, setSubLicense] = createSignal(LICENSE_BASIS_OPTIONS[0]);
+  const [subCertified, setSubCertified] = createSignal(false);
+  const [subSignoff, setSubSignoff] = createSignal("");
   const [activeHint, setActiveHint] = createSignal(null); // "dilution" | "tank" | "agitation" | null
 
   // Catalog state
@@ -402,6 +429,50 @@ export default function App() {
     }
   }
 
+  function openSubmitModal() {
+    setSubmitError("");
+    if (!subFilm() && selectedFilm()) setSubFilm(selectedFilm().fullName);
+    if (!subDeveloper() && selectedDeveloper()) setSubDeveloper(selectedDeveloper());
+    if (!subDilution() && selectedDilution()) setSubDilution(selectedDilution());
+    setSubTempUnit(tempUnit());
+    setSubTemp(tempUnit() === "fahrenheit" ? "68" : "20");
+    setShowSubmitModal(true);
+  }
+
+  function handleRecipeIssueSubmit(e) {
+    e.preventDefault();
+    if (!parseTimeToSeconds(subTime())) {
+      setSubmitError("Enter development time in mm:ss format (for example 07:30).");
+      return;
+    }
+    if (!subCertified()) {
+      setSubmitError("Please check the Apache-2.0 and non-scraping certification box.");
+      return;
+    }
+    setSubmitError("");
+    const issueUrl = buildRecipeIssueUrl({
+      film: subFilm(),
+      developer: subDeveloper(),
+      dilution: subDilution(),
+      ei: subEi(),
+      format: subFormat(),
+      time: subTime(),
+      temperature: subTemp(),
+      temperatureUnit: subTempUnit(),
+      agitation: subAgitation(),
+      limits: subLimits(),
+      confidence: subConfidence(),
+      publisher: subPublisher(),
+      title: subTitle(),
+      sourceUrl: subUrl(),
+      retrievedDate: subDate(),
+      licenseBasis: subLicense(),
+      signoff: subSignoff()
+    });
+    window.open(issueUrl, "_blank", "noopener,noreferrer");
+    setShowSubmitModal(false);
+  }
+
   function resetProcess() {
     stopTicker();
     setWaitingForPour(false);
@@ -467,6 +538,9 @@ export default function App() {
                   <li><a href="https://www.ilfordphoto.com/amfile/file/download/file/1919/product/689/" target="_blank" rel="noreferrer">Ilford FP4 Plus technical information</a></li>
                 </ul>
               </details>
+              <button class="contribution-button" type="button" onClick={openSubmitModal}>
+                Submit custom development times
+              </button>
               <p class="safety-callout"><strong>Safety:</strong> The manufacturer label and safety data sheet control. Use appropriate protective equipment and ventilation, and follow local disposal rules.</p>
 
               <div class="chain-preview">
@@ -995,6 +1069,128 @@ export default function App() {
                 </div>
               </Show>
             </div>
+          </div>
+        </div>
+      </Show>
+
+      <Show when={showSubmitModal()}>
+        <div
+          class="crt-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="submit-recipe-title"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowSubmitModal(false); }}
+          onKeyDown={(e) => { if (e.key === "Escape") setShowSubmitModal(false); }}
+        >
+          <div class="crt-dialog crt-dialog-wide">
+            <div class="crt-dialog-header">
+              <h2 class="crt-dialog-title" id="submit-recipe-title">Submit custom development time</h2>
+              <button class="crt-close" type="button" aria-label="Close submission form" onClick={() => setShowSubmitModal(false)}>×</button>
+            </div>
+            <form class="crt-dialog-body submit-form" onSubmit={handleRecipeIssueSubmit}>
+              <p class="submit-intro">
+                Opens a pre-filled GitHub Issue on <strong>mjdelro/darktimer-app</strong> formatted per{" "}
+                <a href="https://github.com/mjdelro/darktimer-app/blob/main/CONTRIBUTING.md" target="_blank" rel="noreferrer">CONTRIBUTING.md</a> (Apache-2.0).
+              </p>
+
+              <div class="submit-grid">
+                <div class="sub-field">
+                  <label for="subFilm">Film stock *</label>
+                  <input id="subFilm" type="text" required placeholder="Kodak TRI-X 400" value={subFilm()} onInput={(e) => setSubFilm(e.currentTarget.value)} />
+                </div>
+                <div class="sub-field">
+                  <label for="subDev">Developer *</label>
+                  <input id="subDev" type="text" required placeholder="Kodak D-76" value={subDeveloper()} onInput={(e) => setSubDeveloper(e.currentTarget.value)} />
+                </div>
+                <div class="sub-field">
+                  <label for="subDil">Dilution *</label>
+                  <input id="subDil" type="text" required placeholder="Stock, 1+1, B (1+31)" value={subDilution()} onInput={(e) => setSubDilution(e.currentTarget.value)} />
+                </div>
+                <div class="sub-field">
+                  <label for="subEi">EI (ISO) *</label>
+                  <input id="subEi" type="number" min="1" max="102400" required value={subEi()} onInput={(e) => setSubEi(e.currentTarget.value)} />
+                </div>
+                <div class="sub-field">
+                  <label for="subFormat">Format *</label>
+                  <select id="subFormat" value={subFormat()} onChange={(e) => setSubFormat(e.currentTarget.value)}>
+                    <option value="35mm">35mm</option>
+                    <option value="120">120</option>
+                    <option value="sheet">Sheet</option>
+                    <option value="any">Any format</option>
+                  </select>
+                </div>
+                <div class="sub-field">
+                  <label for="subTime">Time (mm:ss) *</label>
+                  <input id="subTime" type="text" required pattern="\d{1,3}:[0-5]\d" placeholder="07:30" value={subTime()} onInput={(e) => setSubTime(e.currentTarget.value)} />
+                </div>
+                <div class="sub-field">
+                  <label for="subTemp">Temperature *</label>
+                  <div class="submit-temp-row">
+                    <input id="subTemp" type="number" step="0.1" required value={subTemp()} onInput={(e) => setSubTemp(e.currentTarget.value)} />
+                    <select aria-label="Temperature unit" value={subTempUnit()} onChange={(e) => setSubTempUnit(e.currentTarget.value)}>
+                      <option value="celsius">°C</option>
+                      <option value="fahrenheit">°F</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="sub-field">
+                  <label for="subAgitation">Agitation method *</label>
+                  <select id="subAgitation" value={subAgitation()} onChange={(e) => setSubAgitation(e.currentTarget.value)}>
+                    <For each={AGITATION_SUBMISSION_OPTIONS}>{(opt) => <option value={opt}>{opt}</option>}</For>
+                  </select>
+                </div>
+                <div class="sub-field sub-field-full">
+                  <label for="subLimits">Format / EI / Agitation limits (optional, factual only)</label>
+                  <input id="subLimits" type="text" placeholder="e.g. Small tank only; not recommended for rotary" value={subLimits()} onInput={(e) => setSubLimits(e.currentTarget.value)} />
+                </div>
+
+                <div class="sub-field">
+                  <label for="subConfidence">Confidence *</label>
+                  <select id="subConfidence" value={subConfidence()} onChange={(e) => setSubConfidence(e.currentTarget.value)}>
+                    <For each={CONFIDENCE_OPTIONS}>{(opt) => <option value={opt}>{opt}</option>}</For>
+                  </select>
+                </div>
+                <div class="sub-field">
+                  <label for="subDate">Retrieval / Test date *</label>
+                  <input id="subDate" type="date" required value={subDate()} onInput={(e) => setSubDate(e.currentTarget.value)} />
+                </div>
+                <div class="sub-field">
+                  <label for="subPublisher">Source publisher *</label>
+                  <input id="subPublisher" type="text" required placeholder="Kodak Alaris, HARMAN, or your name" value={subPublisher()} onInput={(e) => setSubPublisher(e.currentTarget.value)} />
+                </div>
+                <div class="sub-field">
+                  <label for="subTitle">Source title *</label>
+                  <input id="subTitle" type="text" required placeholder="Publication title or Personal test log" value={subTitle()} onInput={(e) => setSubTitle(e.currentTarget.value)} />
+                </div>
+                <div class="sub-field sub-field-full">
+                  <label for="subUrl">Stable source URL (manufacturer PDF / page, optional)</label>
+                  <input id="subUrl" type="url" placeholder="https://..." value={subUrl()} onInput={(e) => setSubUrl(e.currentTarget.value)} />
+                </div>
+                <div class="sub-field sub-field-full">
+                  <label for="subLicense">License basis *</label>
+                  <select id="subLicense" value={subLicense()} onChange={(e) => setSubLicense(e.currentTarget.value)}>
+                    <For each={LICENSE_BASIS_OPTIONS}>{(opt) => <option value={opt}>{opt}</option>}</For>
+                  </select>
+                </div>
+                <div class="sub-field sub-field-full">
+                  <label for="subSignoff">DCO Sign-off (Name &lt;email&gt;) *</label>
+                  <input id="subSignoff" type="text" required placeholder="Your Name <you@example.com>" value={subSignoff()} onInput={(e) => setSubSignoff(e.currentTarget.value)} />
+                </div>
+              </div>
+
+              <label class="submit-cert">
+                <input type="checkbox" checked={subCertified()} onChange={(e) => setSubCertified(e.currentTarget.checked)} required />
+                <span>I certify this contains only minimum factual fields, does not scrape or copy any third-party database, table, layout, or user notes without a written license, and I have the right to contribute it under Apache-2.0.</span>
+              </label>
+
+              <Show when={submitError()}>
+                <p class="submit-error" role="alert">{submitError()}</p>
+              </Show>
+
+              <button class="primary-button" type="submit">
+                Open GitHub Issue
+              </button>
+            </form>
           </div>
         </div>
       </Show>
