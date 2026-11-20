@@ -680,23 +680,7 @@ export default function App() {
           </span>
         </a>
         <div class="header-actions">
-          <div class="temperature-toggle">
-            <span class="temperature-label" aria-hidden="true">TEMP</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={tempUnit() === "celsius"}
-              aria-label={`Temperature unit: ${tempUnit() === "fahrenheit" ? "Fahrenheit" : "Celsius"}`}
-              class="vcr-switch vcr-switch-temp"
-              classList={{ "is-on": tempUnit() === "celsius" }}
-              onClick={() => setTempUnit(tempUnit() === "fahrenheit" ? "celsius" : "fahrenheit")}
-            >
-              <span class="vcr-switch-label" aria-hidden="true">
-                {tempUnit() === "celsius" ? "°C" : "°F"}
-              </span>
-              <span class="vcr-switch-thumb" aria-hidden="true" />
-            </button>
-          </div>
+          <span class="version-badge" aria-label="Application version">v1.0.0</span>
         </div>
       </header>
 
@@ -1306,6 +1290,23 @@ export default function App() {
           <p class="disclaimer-note">Times are starting points, not guarantees. The manufacturer label and safety data sheet control. darkTimer is independent and is not affiliated with or endorsed by the named manufacturers.</p>
         </div>
         <div class="footer-links">
+          <div class="temperature-toggle">
+            <span class="temperature-label" aria-hidden="true">TEMP</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={tempUnit() === "celsius"}
+              aria-label={`Temperature unit: ${tempUnit() === "fahrenheit" ? "Fahrenheit" : "Celsius"}`}
+              class="vcr-switch vcr-switch-temp"
+              classList={{ "is-on": tempUnit() === "celsius" }}
+              onClick={() => setTempUnit(tempUnit() === "fahrenheit" ? "celsius" : "fahrenheit")}
+            >
+              <span class="vcr-switch-label" aria-hidden="true">
+                {tempUnit() === "celsius" ? "°C" : "°F"}
+              </span>
+              <span class="vcr-switch-thumb" aria-hidden="true" />
+            </button>
+          </div>
           <a class="github-link kofi-link" href="https://ko-fi.com/mikey_247" target="_blank" rel="noreferrer">
             <svg class="github-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M18 8h1a3 3 0 0 1 0 6h-1v1a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V8a1 1 0 0 1 1-1h15v1Zm0 4h1a1 1 0 0 0 0-2h-1v2Zm-7.5 3.6c1.66-1.16 2.8-2.2 2.8-3.38a1.72 1.72 0 0 0-1.7-1.72c-.6 0-1.1.3-1.4.76-.3-.46-.8-.76-1.4-.76a1.72 1.72 0 0 0-1.7 1.72c0 1.18 1.14 2.22 2.8 3.38l.3.2.3-.2Z" />
