@@ -1012,6 +1012,21 @@ export default function App() {
                     </div>
                   )}
                 </Show>
+
+                <Show when={isCustomRecipe()}>
+                  <div class="submission-prompt submission-prompt-setup">
+                    <h3>Submit this custom recipe</h3>
+                    <p>Review the film, developer, dilution, time, temperature, and agitation before opening a draft public GitHub issue.</p>
+                    <button
+                      class="contribution-button"
+                      type="button"
+                      disabled={Boolean(customRecipeError())}
+                      onClick={openSubmitModal}
+                    >
+                      Submit this recipe
+                    </button>
+                  </div>
+                </Show>
               </div>
 
               {/* 04 Stop Bath */}
