@@ -1442,7 +1442,17 @@ export default function App() {
 
               <label class="submit-cert">
                 <input type="checkbox" checked={subCertified()} onChange={(e) => setSubCertified(e.currentTarget.checked)} required />
-                <span>I confirm this recipe comes from my own testing or I have the tester's written permission. It was not copied from a third-party database or user notes. I intentionally submit these factual values and my original notes for inclusion under Apache-2.0.</span>
+                <span>
+                  I confirm this recipe comes from my own testing or I have the tester's written permission. It was not copied from a third-party database or user notes. I intentionally submit these factual values and my original notes for inclusion under{" "}
+                  <a
+                    href="https://github.com/mjdelro/darktimer-app/blob/main/LICENSE"
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Apache-2.0
+                  </a>.
+                </span>
               </label>
 
               <Show when={submitError()}>

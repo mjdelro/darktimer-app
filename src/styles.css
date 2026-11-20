@@ -1183,6 +1183,11 @@ select:disabled {
   accent-color: var(--amber);
 }
 
+.submit-cert a {
+  display: inline;
+  min-height: auto;
+}
+
 .submit-error {
   color: #ff6b5f;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
