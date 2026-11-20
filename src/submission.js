@@ -21,7 +21,7 @@ export const AGITATION_SUBMISSION_OPTIONS = [
   { value: "standard", label: "60s initial + 10s / min (Standard)" },
   { value: "ilford", label: "Ilford (10s / min)" },
   { value: "kodak", label: "Kodak (30s + 5s / 30s)" },
-  { value: "rodinal", label: "Rodinal (60s + 10s / 30s)" },
+  { value: "rodinal", label: "Rodinal (10s / min)" },
   { value: "stand", label: "Stand (60s initial only)" }
 ];
 

@@ -547,22 +547,6 @@ input[type="number"]:hover,
   border-color: var(--amber);
 }
 
-.custom-recipe-fields {
-  display: grid;
-  gap: 6px;
-  padding-top: 10px;
-  border-top: 1px solid #35332d;
-}
-
-.custom-recipe-fields label {
-  color: var(--muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
 .sr-only {
   position: absolute;
   width: 1px;

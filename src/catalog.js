@@ -182,11 +182,3 @@ export function getRecipesForFilm(film, catalogByFilm) {
     filmKey: film.key
   }));
 }
-
-export async function loadFilmList(filmEntries) {
-  return { mode: "local", films: buildFilmList(filmEntries) };
-}
-
-export async function loadRecipesForFilm(film, catalogByFilm) {
-  return getRecipesForFilm(film, catalogByFilm);
-}

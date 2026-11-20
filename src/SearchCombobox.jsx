@@ -19,17 +19,23 @@ export default function SearchCombobox(props) {
     }
   });
 
+  const indexedOptions = createMemo(() =>
+    (props.options || []).map((opt) => ({
+      ...opt,
+      lower: opt.label.toLowerCase()
+    }))
+  );
+
   const filteredOptions = createMemo(() => {
-    const options = props.options || [];
+    const options = indexedOptions();
     const q = query().trim().toLowerCase();
     if (!q) return options;
 
     const startsWith = [];
     const includes = [];
     for (const opt of options) {
-      const lower = opt.label.toLowerCase();
-      if (lower.startsWith(q)) startsWith.push(opt);
-      else if (lower.includes(q)) includes.push(opt);
+      if (opt.lower.startsWith(q)) startsWith.push(opt);
+      else if (opt.lower.includes(q)) includes.push(opt);
     }
     return [...startsWith, ...includes];
   });
@@ -37,7 +43,7 @@ export default function SearchCombobox(props) {
   const exactMatch = createMemo(() => {
     const q = query().trim().toLowerCase();
     if (!q) return null;
-    return (props.options || []).find((opt) => opt.label.toLowerCase() === q) || null;
+    return indexedOptions().find((opt) => opt.lower === q) || null;
   });
 
   const displayItems = createMemo(() => {
@@ -163,8 +169,7 @@ export default function SearchCombobox(props) {
     }
   }
 
-  function handleFocusOut(event) {
-    if (containerRef && containerRef.contains(event.relatedTarget)) return;
+  function commitAndClose() {
     if (!isOpen()) return;
     setIsOpen(false);
     const trimmed = query().trim();
@@ -185,13 +190,17 @@ export default function SearchCombobox(props) {
     }
   }
 
+  function handleFocusOut(event) {
+    if (containerRef && containerRef.contains(event.relatedTarget)) return;
+    commitAndClose();
+  }
+
   // Close when clicking outside
   createEffect(() => {
     if (!isOpen()) return;
     const handleOutside = (event) => {
       if (containerRef && !containerRef.contains(event.target)) {
-        setIsOpen(false);
-        setQuery(props.selectedLabel || "");
+        commitAndClose();
       }
     };
     document.addEventListener("pointerdown", handleOutside);
