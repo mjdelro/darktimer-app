@@ -630,6 +630,8 @@ input[type="number"]:hover,
   padding: 4px;
   list-style: none;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  contain: layout style;
   border: 1px solid var(--amber);
   border-radius: var(--radius-small);
   background: var(--display);
@@ -644,6 +646,7 @@ input[type="number"]:hover,
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  contain: layout style;
   color: var(--paper);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.84rem;
@@ -706,6 +709,34 @@ input[type="number"]:hover,
   color: var(--muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.82rem;
+}
+
+.combobox-more {
+  margin-top: 4px;
+  padding: 8px 10px;
+  border-top: 1px solid #35332d;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.74rem;
+}
+
+.combobox-show-all {
+  padding: 4px 8px;
+  border: 1px solid #555751;
+  border-radius: 2px;
+  background: #151613;
+  color: var(--amber);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.combobox-show-all:hover {
+  border-color: var(--amber);
 }
 
 .custom-dilution-group {

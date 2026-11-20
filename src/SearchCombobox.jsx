@@ -1,8 +1,11 @@
 import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js";
 
+const MAX_VISIBLE_OPTIONS = 40;
+
 export default function SearchCombobox(props) {
   const [query, setQuery] = createSignal("");
   const [isOpen, setIsOpen] = createSignal(false);
+  const [showAll, setShowAll] = createSignal(false);
   const [activeIndex, setActiveIndex] = createSignal(0);
 
   let containerRef;
@@ -27,17 +30,19 @@ export default function SearchCombobox(props) {
   );
 
   const filteredOptions = createMemo(() => {
+    if (!isOpen()) return [];
     const options = indexedOptions();
     const q = query().trim().toLowerCase();
     if (!q) return options;
 
     const startsWith = [];
     const includes = [];
-    for (const opt of options) {
+    for (let i = 0; i < options.length; i += 1) {
+      const opt = options[i];
       if (opt.lower.startsWith(q)) startsWith.push(opt);
       else if (opt.lower.includes(q)) includes.push(opt);
     }
-    return [...startsWith, ...includes];
+    return startsWith.length === 0 ? includes : includes.length === 0 ? startsWith : startsWith.concat(includes);
   });
 
   const exactMatch = createMemo(() => {
@@ -46,8 +51,17 @@ export default function SearchCombobox(props) {
     return indexedOptions().find((opt) => opt.lower === q) || null;
   });
 
+  const hiddenCount = createMemo(() => {
+    if (showAll()) return 0;
+    return Math.max(0, filteredOptions().length - MAX_VISIBLE_OPTIONS);
+  });
+
   const displayItems = createMemo(() => {
-    const list = filteredOptions();
+    if (!isOpen()) return [];
+    const all = filteredOptions();
+    const list = showAll() || all.length <= MAX_VISIBLE_OPTIONS
+      ? all
+      : all.slice(0, MAX_VISIBLE_OPTIONS);
     const trimmed = query().trim();
     if (props.allowCustom && trimmed && !exactMatch()) {
       return [
@@ -86,11 +100,13 @@ export default function SearchCombobox(props) {
       setQuery(item.label);
     }
     setIsOpen(false);
+    setShowAll(false);
     setActiveIndex(0);
   }
 
   function clearSelection() {
     setQuery("");
+    setShowAll(false);
     props.onClear?.();
     setIsOpen(true);
     setActiveIndex(0);
@@ -100,6 +116,7 @@ export default function SearchCombobox(props) {
   function handleInput(event) {
     const val = event.currentTarget.value;
     setQuery(val);
+    setShowAll(false);
     setIsOpen(true);
     setActiveIndex(0);
     if (!val.trim()) {
@@ -226,6 +243,9 @@ export default function SearchCombobox(props) {
           type="text"
           role="combobox"
           autocomplete="off"
+          autocorrect="off"
+          autocapitalize="none"
+          enterKeyHint="search"
           spellcheck={false}
           aria-autocomplete="list"
           aria-expanded={isOpen()}
@@ -237,6 +257,7 @@ export default function SearchCombobox(props) {
           onInput={handleInput}
           onFocus={() => {
             if (!props.disabled) {
+              setShowAll(false);
               setIsOpen(true);
               setActiveIndex(0);
             }
@@ -277,7 +298,7 @@ export default function SearchCombobox(props) {
       </div>
 
       <span class="sr-only" role="status" aria-live="polite" aria-atomic="true">
-        {isOpen() ? `${displayItems().length} ${displayItems().length === 1 ? "option" : "options"} available.` : ""}
+        {isOpen() ? `${filteredOptions().length} ${filteredOptions().length === 1 ? "option" : "options"} available.` : ""}
       </span>
 
       <Show when={isOpen() && !props.disabled}>
@@ -309,7 +330,9 @@ export default function SearchCombobox(props) {
                     e.preventDefault();
                     selectItem(item);
                   }}
-                  onMouseEnter={() => setActiveIndex(idx())}
+                  onPointerEnter={(e) => {
+                    if (e.pointerType === "mouse") setActiveIndex(idx());
+                  }}
                 >
                   <span class="combobox-option-label">
                     {item.isCustomEntry ? `Use custom: "${item.label}"` : item.label}
@@ -327,6 +350,20 @@ export default function SearchCombobox(props) {
                 </li>
               )}
             </For>
+            <Show when={hiddenCount() > 0}>
+              <li class="combobox-more" role="presentation">
+                <span>Showing {MAX_VISIBLE_OPTIONS} of {filteredOptions().length} — keep typing to filter</span>
+                <button
+                  type="button"
+                  class="combobox-show-all"
+                  tabIndex="-1"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setShowAll(true)}
+                >
+                  Show all
+                </button>
+              </li>
+            </Show>
           </Show>
         </ul>
       </Show>
