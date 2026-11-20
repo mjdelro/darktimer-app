@@ -2,6 +2,7 @@ import { createEffect, onCleanup, Show } from "solid-js";
 import { trapDialogFocus } from "./dialog.js";
 
 const GUIDE_TITLES = {
+  presoak: "Presoak (pre-wet)",
   dilution: "How to read dilutions",
   tank: "Tank types & capacities",
   agitation: "Agitation methods",
@@ -47,6 +48,20 @@ export default function GuideModal(props) {
           <button class="crt-close" ref={hintCloseButton} type="button" aria-label="Close guide" onClick={props.onClose}>×</button>
         </div>
         <div class="crt-dialog-body">
+          <Show when={props.activeHint === "presoak"}>
+            <p>A presoak (pre-wet) fills the tank with plain water at development temperature before pouring in developer. It brings the tank and reels to temperature, softens the gelatin emulsion, and rinses out water-soluble anti-halation dyes.</p>
+            <ul class="crt-list">
+              <li><strong>Agitated (1–2 min)</strong> : Gentle continuous agitation to wet the film evenly and wash away strong anti-halation dyes (common on 120, sheet film, and Foma stocks).</li>
+              <li><strong>Stand (5–15 min)</strong> : Swirl gently for 10 seconds to dislodge air bubbles, then let the tank sit still before draining thoroughly.</li>
+              <li><strong>When to skip it</strong> : <strong>Ilford</strong> specifically recommends <em>against</em> presoaking their films, as their emulsions include wetting agents and a presoak can cause uneven development. <strong>Kodak</strong> also does not require a presoak for standard small-tank processing.</li>
+            </ul>
+            <div class="crt-examples">
+              <p class="crt-examples-label">Official references</p>
+              <p><a href="https://www.ilfordphoto.com/amfile/file/download/file/1919/product/689/" target="_blank" rel="noreferrer">Ilford Film Processing Technical Information</a></p>
+              <p><a href="https://www.kodakprofessional.com/sites/default/files/wysiwyg/pro/resources/edbwf_0.pdf" target="_blank" rel="noreferrer">Kodak Processing Black-and-White Films (ED-BWF)</a></p>
+            </div>
+          </Show>
+
           <Show when={props.activeHint === "dilution"}>
             <p>Dilutions tell you how much developer concentrate to mix with water for a single tank:</p>
             <ul class="crt-list">
