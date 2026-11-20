@@ -22,6 +22,7 @@ import {
   WASH_OPTIONS
 } from "./process.js";
 import { playDing, playStepComplete, playTick, unlockAudio } from "./audio.js";
+import SearchCombobox from "./SearchCombobox.jsx";
 import {
   AGITATION_SUBMISSION_OPTIONS,
   buildRecipeIssueUrl,
@@ -148,7 +149,9 @@ export default function App() {
   const [selectedRecipeId, setSelectedRecipeId] = createSignal("");
   const [customFilmName, setCustomFilmName] = createSignal("");
   const [customDeveloperName, setCustomDeveloperName] = createSignal("");
-  const [customDilution, setCustomDilution] = createSignal("");
+  const [customDilutionMode, setCustomDilutionMode] = createSignal("ratio"); // "ratio" | "stock" | "other"
+  const [customDilutionParts, setCustomDilutionParts] = createSignal("");
+  const [customDilutionOther, setCustomDilutionOther] = createSignal("");
   const [customEi, setCustomEi] = createSignal("400");
   const [customFormat, setCustomFormat] = createSignal("135");
   const [customTemperatureC, setCustomTemperatureC] = createSignal("20");
@@ -319,18 +322,103 @@ export default function App() {
       : variants().find((r) => String(r.id) === selectedRecipeId()) || null
   );
 
+  const filmComboboxOptions = createMemo(() =>
+    films().map((f) => ({
+      key: f.key,
+      label: f.fullName,
+      meta: `ISO ${f.defaultIso}`,
+      badge: f.hasVerifiedRecipes ? "Verified" : ""
+    }))
+  );
+
+  const developerComboboxOptions = createMemo(() => [
+    ...verifiedDevelopersForFilm().map((d) => ({
+      key: d.key,
+      label: d.name,
+      badge: "Verified"
+    })),
+    ...otherDevelopersForFilm().map((d) => ({
+      key: d.key,
+      label: d.name
+    }))
+  ]);
+
+  function resetCustomDilution() {
+    setCustomDilutionMode("ratio");
+    setCustomDilutionParts("");
+    setCustomDilutionOther("");
+  }
+
+  function applyDilutionToCustom(raw) {
+    const val = String(raw || "").trim();
+    if (!val) {
+      resetCustomDilution();
+      return;
+    }
+    if (val.toLowerCase() === "stock") {
+      setCustomDilutionMode("stock");
+      setCustomDilutionParts("");
+      setCustomDilutionOther("");
+      return;
+    }
+    const onePlus = val.match(/^1\s*[+:]\s*(\d+(?:\.\d+)?)$/) || val.match(/\(\s*1\s*[+:]\s*(\d+(?:\.\d+)?)\s*\)$/);
+    if (onePlus) {
+      setCustomDilutionMode("ratio");
+      setCustomDilutionParts(onePlus[1]);
+      setCustomDilutionOther("");
+      return;
+    }
+    setCustomDilutionMode("other");
+    setCustomDilutionParts("");
+    setCustomDilutionOther(val);
+  }
+
+  const resolvedCustomDilution = createMemo(() => {
+    const mode = customDilutionMode();
+    if (mode === "stock") return "Stock";
+    if (mode === "ratio") {
+      const raw = customDilutionParts().trim();
+      if (!raw) return "";
+      const num = Number(raw);
+      if (!Number.isFinite(num) || num < 0) return "";
+      return num === 0 ? "Stock" : `1+${raw}`;
+    }
+    return customDilutionOther().trim();
+  });
+
   function handleFilmChange(nextFilmKey) {
     setSelectedFilmKey(nextFilmKey);
+    if (nextFilmKey !== CUSTOM_FILM_KEY) setCustomFilmName("");
     setSelectedDeveloperKey("");
+    setCustomDeveloperName("");
     setSelectedDilution("");
     setSelectedRecipeId("");
-    setCustomDilution("");
+    resetCustomDilution();
     const nextFilm = filmByKey().get(nextFilmKey);
     setCustomEi(nextFilm?.defaultIso ? String(nextFilm.defaultIso) : "400");
   }
 
+  function handleCustomFilmSelect(name) {
+    setCustomFilmName(name);
+    setSelectedFilmKey(CUSTOM_FILM_KEY);
+    setSelectedDeveloperKey("");
+    setCustomDeveloperName("");
+    setSelectedDilution("");
+    setSelectedRecipeId("");
+    resetCustomDilution();
+    setCustomEi("400");
+  }
+
   function handleDeveloperChange(nextDevKey) {
     setSelectedDeveloperKey(nextDevKey);
+    if (nextDevKey !== CUSTOM_DEVELOPER_KEY) setCustomDeveloperName("");
+    setSelectedDilution("");
+    setSelectedRecipeId("");
+  }
+
+  function handleCustomDeveloperSelect(name) {
+    setCustomDeveloperName(name);
+    setSelectedDeveloperKey(CUSTOM_DEVELOPER_KEY);
     setSelectedDilution("");
     setSelectedRecipeId("");
   }
@@ -338,8 +426,8 @@ export default function App() {
   function handleVariantChange(nextVariantId) {
     setSelectedRecipeId(nextVariantId);
     if (nextVariantId === CUSTOM_RECIPE_ID) {
-      if (!customDilution() && selectedDilution()) {
-        setCustomDilution(selectedDilution());
+      if (!resolvedCustomDilution() && selectedDilution()) {
+        applyDilutionToCustom(selectedDilution());
       }
       return;
     }
@@ -403,7 +491,11 @@ export default function App() {
     if (!isCustomRecipe()) return "";
     if (!resolvedFilmName()) return "Enter a custom film name.";
     if (!resolvedDeveloperName()) return "Enter a custom developer name.";
-    if (!customDilution().trim()) return "Enter the custom developer dilution.";
+    if (!resolvedCustomDilution()) {
+      return customDilutionMode() === "ratio"
+        ? "Enter the parts of water (e.g. 50 for 1+50, or switch to Stock)."
+        : "Enter the custom developer dilution.";
+    }
     if (!Number.isInteger(Number(customEi())) || Number(customEi()) <= 0) return "Enter a positive whole-number EI.";
     if (!Number.isFinite(Number(customTemperatureC())) || Number(customTemperatureC()) <= 0 || Number(customTemperatureC()) > 50) return customTemperatureLimits().message;
     return "";
@@ -413,7 +505,7 @@ export default function App() {
         id: CUSTOM_RECIPE_ID,
         film: resolvedFilmName(),
         developer: resolvedDeveloperName(),
-        dilution: customDilution().trim(),
+        dilution: resolvedCustomDilution(),
         seconds: totalDevSeconds(),
         temperatureC: Math.round(Number(customTemperatureC()) * 10) / 10,
         ei: Number(customEi()),
@@ -846,18 +938,20 @@ export default function App() {
               <div class="stage-card">
                 <div class="stage-row">
                   <label class="stage-label" for="filmSelect"><span class="stage-num">02</span> Film</label>
-                  <select id="filmSelect" value={selectedFilmKey()} onChange={(e) => handleFilmChange(e.currentTarget.value)}>
-                    <option value="">Select film</option>
-                    <For each={films()}>{(f) => <option value={f.key}>{f.fullName}</option>}</For>
-                    <option value={CUSTOM_FILM_KEY}>Custom film (enter name)</option>
-                  </select>
+                  <SearchCombobox
+                    id="filmSelect"
+                    placeholder="Search 480 B&W films…"
+                    listboxLabel="Black and white films"
+                    clearLabel="Clear film"
+                    options={filmComboboxOptions()}
+                    selectedKey={selectedFilmKey()}
+                    selectedLabel={resolvedFilmName()}
+                    allowCustom={true}
+                    onSelect={handleFilmChange}
+                    onSelectCustom={handleCustomFilmSelect}
+                    onClear={() => handleFilmChange("")}
+                  />
                 </div>
-                <Show when={isCustomFilm()}>
-                  <div class="custom-recipe-fields">
-                    <label for="customFilmName">Custom film name *</label>
-                    <input id="customFilmName" type="text" required placeholder="Enter the film product name" value={customFilmName()} onInput={(e) => setCustomFilmName(e.currentTarget.value)} />
-                  </div>
-                </Show>
                 <Show when={catalogMode() === "error"}>
                   <p class="catalog-error" role="alert">Could not load the verified recipe catalog. You can still use any film and developer with a Custom Recipe. {catalogError()} <button type="button" onClick={() => window.location.reload()}>Reload</button></p>
                 </Show>
@@ -867,29 +961,21 @@ export default function App() {
               <div class="stage-card">
                 <div class="stage-row">
                   <label class="stage-label" for="devSelect"><span class="stage-num">03</span> Developer</label>
-                  <select id="devSelect" value={selectedDeveloperKey()} onChange={(e) => handleDeveloperChange(e.currentTarget.value)} disabled={!selectedFilmKey()}>
-                    <option value="">Select developer</option>
-                    <Show
-                      when={verifiedDevelopersForFilm().length > 0}
-                      fallback={<For each={allDevelopers()}>{(d) => <option value={d.key}>{d.name}</option>}</For>}
-                    >
-                      <optgroup label="Verified recipes for this film">
-                        <For each={verifiedDevelopersForFilm()}>{(d) => <option value={d.key}>{d.name}</option>}</For>
-                      </optgroup>
-                      <optgroup label="All B&W developers (Custom Recipe)">
-                        <For each={otherDevelopersForFilm()}>{(d) => <option value={d.key}>{d.name}</option>}</For>
-                      </optgroup>
-                    </Show>
-                    <option value={CUSTOM_DEVELOPER_KEY}>Custom developer (enter name)</option>
-                  </select>
+                  <SearchCombobox
+                    id="devSelect"
+                    placeholder={selectedFilmKey() ? "Search 342 B&W developers…" : "Select a film first"}
+                    listboxLabel="Black and white developers"
+                    clearLabel="Clear developer"
+                    options={developerComboboxOptions()}
+                    selectedKey={selectedDeveloperKey()}
+                    selectedLabel={resolvedDeveloperName()}
+                    disabled={!selectedFilmKey()}
+                    allowCustom={true}
+                    onSelect={handleDeveloperChange}
+                    onSelectCustom={handleCustomDeveloperSelect}
+                    onClear={() => handleDeveloperChange("")}
+                  />
                 </div>
-
-                <Show when={isCustomDeveloper()}>
-                  <div class="custom-recipe-fields">
-                    <label for="customDeveloperName">Custom developer name *</label>
-                    <input id="customDeveloperName" type="text" required placeholder="Enter the developer product name" value={customDeveloperName()} onInput={(e) => setCustomDeveloperName(e.currentTarget.value)} />
-                  </div>
-                </Show>
 
                 <div class="sub-fields">
                   <div class="sub-field sub-field-full">
@@ -920,7 +1006,46 @@ export default function App() {
                     <button class="hint-sub-button" type="button" onClick={() => setActiveHint("dilution")} title="How to read dilutions">Dilution</button>
                     <Show
                       when={!isCustomRecipe()}
-                      fallback={<input id="customDilution" aria-label="Custom developer dilution" type="text" required placeholder="e.g. 1+50 or Stock" value={customDilution()} onInput={(e) => setCustomDilution(e.currentTarget.value)} />}
+                      fallback={
+                        <div class="custom-dilution-group">
+                          <select
+                            id="customDilutionMode"
+                            class="custom-dilution-mode"
+                            aria-label="Dilution format"
+                            value={customDilutionMode()}
+                            onChange={(e) => setCustomDilutionMode(e.currentTarget.value)}
+                          >
+                            <option value="ratio">1+</option>
+                            <option value="stock">Stock</option>
+                            <option value="other">Other</option>
+                          </select>
+                          <Show when={customDilutionMode() === "ratio"}>
+                            <input
+                              id="customDilution"
+                              aria-label="Parts water per 1 part developer"
+                              type="number"
+                              min="0"
+                              step="any"
+                              inputMode="decimal"
+                              required
+                              placeholder="Parts water (e.g. 50)"
+                              value={customDilutionParts()}
+                              onInput={(e) => setCustomDilutionParts(e.currentTarget.value)}
+                            />
+                          </Show>
+                          <Show when={customDilutionMode() === "other"}>
+                            <input
+                              id="customDilution"
+                              aria-label="Custom developer dilution"
+                              type="text"
+                              required
+                              placeholder="e.g. 1+1+100 or 2+3"
+                              value={customDilutionOther()}
+                              onInput={(e) => setCustomDilutionOther(e.currentTarget.value)}
+                            />
+                          </Show>
+                        </div>
+                      }
                     >
                       <select id="dilSelect" aria-label="Dilution" value={selectedDilution()} onChange={(e) => handleDilutionChange(e.currentTarget.value)} disabled={dilutions().length === 0}>
                         <option value="">Select dilution</option>
