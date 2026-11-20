@@ -112,5 +112,7 @@ assert.equal(hp5.defaultIso, 400, "Ilford HP5+ default ISO should be 400");
 const delta3200 = mergedFilms.find((f) => f.normalized === "ilford delta 3200");
 assert.equal(delta3200.defaultIso, 3200, "Ilford Delta 3200 default ISO should be 3200");
 assert.ok(mergedFilms.every((f) => Number.isInteger(f.defaultIso) && f.defaultIso > 0), "Every film should have a positive integer default ISO");
+assert.equal(mergedFilms.filter((f) => Number.isFinite(f.popularRank)).length, 40, "Exactly 40 popular films should match the merged film list");
+assert.equal(mergedDevelopers.filter((d) => Number.isFinite(d.popularRank)).length, 40, "Exactly 40 popular developers should match the merged developer list");
 
 console.log(`Recipe catalog tests passed (${catalog.recipes.length} recipes, ${catalog.sources.length} sources, ${mergedFilms.length} films, ${mergedDevelopers.length} developers).`);

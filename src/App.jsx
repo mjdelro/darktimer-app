@@ -253,24 +253,30 @@ export default function App() {
   );
 
   const filmComboboxOptions = createMemo(() =>
-    films().map((f) => ({
-      key: f.key,
-      label: f.fullName,
-      meta: `ISO ${f.defaultIso}`,
-      badge: f.hasVerifiedRecipes ? "Verified" : ""
-    }))
+    [...films()]
+      .sort((a, b) => (a.popularRank - b.popularRank) || a.fullName.localeCompare(b.fullName))
+      .map((f) => ({
+        key: f.key,
+        label: f.fullName,
+        meta: `ISO ${f.defaultIso}`,
+        badge: f.hasVerifiedRecipes ? "Verified" : ""
+      }))
   );
 
   const developerComboboxOptions = createMemo(() => [
-    ...verifiedDevelopersForFilm().map((d) => ({
-      key: d.key,
-      label: d.name,
-      badge: "Verified"
-    })),
-    ...otherDevelopersForFilm().map((d) => ({
-      key: d.key,
-      label: d.name
-    }))
+    ...[...verifiedDevelopersForFilm()]
+      .sort((a, b) => (a.popularRank - b.popularRank) || a.name.localeCompare(b.name))
+      .map((d) => ({
+        key: d.key,
+        label: d.name,
+        badge: "Verified"
+      })),
+    ...[...otherDevelopersForFilm()]
+      .sort((a, b) => (a.popularRank - b.popularRank) || a.name.localeCompare(b.name))
+      .map((d) => ({
+        key: d.key,
+        label: d.name
+      }))
   ]);
 
   function resetCustomDilution() {

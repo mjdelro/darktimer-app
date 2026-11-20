@@ -352,7 +352,11 @@ export default function SearchCombobox(props) {
             </For>
             <Show when={hiddenCount() > 0}>
               <li class="combobox-more" role="presentation">
-                <span>Showing {MAX_VISIBLE_OPTIONS} of {filteredOptions().length} — keep typing to filter</span>
+                <span>
+                  {query().trim()
+                    ? `Showing ${MAX_VISIBLE_OPTIONS} of ${filteredOptions().length} — keep typing to filter`
+                    : `Top ${MAX_VISIBLE_OPTIONS} common — type to search all ${filteredOptions().length}`}
+                </span>
                 <button
                   type="button"
                   class="combobox-show-all"
