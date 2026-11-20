@@ -2,6 +2,15 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  buildDeveloperList,
+  buildFilmList,
+  getRecipesForFilm,
+  normalizeDeveloperName,
+  normalizeFilmName
+} from "../src/catalog.js";
+import { BW_FILMS } from "../src/data/films.js";
+import { BW_DEVELOPERS } from "../src/data/developers.js";
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
 const dataDirectory = path.join(directory, "..", "public", "data");
@@ -58,4 +67,43 @@ for (const removedFile of ["rodinal-recipes.json", "xtol-recipes.json", "d76-rec
   assert.equal(fs.existsSync(path.join(dataDirectory, removedFile)), false, `${removedFile} must stay excluded pending a written license`);
 }
 
-console.log(`Recipe catalog tests passed (${catalog.recipes.length} recipes, ${catalog.sources.length} sources).`);
+// Curated B&W film and developer picker tests
+assert.ok(BW_FILMS.length >= 450, "Expected curated B&W film picker list");
+assert.ok(BW_DEVELOPERS.length >= 300, "Expected curated B&W developer picker list");
+
+const byFilm = new Map();
+const filmEntries = [];
+for (const recipe of catalog.recipes) {
+  const normalizedFilm = normalizeFilmName(recipe.film);
+  if (!byFilm.has(normalizedFilm)) {
+    byFilm.set(normalizedFilm, []);
+    filmEntries.push({ normalized: normalizedFilm, key: `film:${normalizedFilm}`, fullName: recipe.film });
+  }
+  byFilm.get(normalizedFilm).push({
+    ...recipe,
+    normalizedDeveloper: normalizeDeveloperName(recipe.developer)
+  });
+}
+
+const mergedFilms = buildFilmList(filmEntries);
+const filmKeys = new Set(mergedFilms.map((f) => f.key));
+assert.equal(filmKeys.size, mergedFilms.length, "Merged film list must not contain duplicate normalized keys");
+assert.equal(mergedFilms.filter((f) => normalizeFilmName(f.fullName) === "kodak tmax 100").length, 1, "Kodak T-MAX 100 / TMax 100 should deduplicate");
+assert.equal(mergedFilms.filter((f) => normalizeFilmName(f.fullName) === "ilford fp4 plus").length, 1, "Ilford FP4 Plus / FP4+ should deduplicate");
+
+const mergedDevelopers = buildDeveloperList(byFilm);
+const devKeys = new Set(mergedDevelopers.map((d) => d.key));
+assert.equal(devKeys.size, mergedDevelopers.length, "Merged developer list must not contain duplicate normalized keys");
+assert.equal(normalizeDeveloperName("Kodak D-76"), normalizeDeveloperName("D-76"));
+assert.equal(normalizeDeveloperName("Kodak XTOL"), normalizeDeveloperName("Xtol"));
+assert.equal(normalizeDeveloperName("Kodak HC-110"), normalizeDeveloperName("HC-110"));
+assert.equal(normalizeDeveloperName("Kodak T-MAX Developer"), normalizeDeveloperName("TMax Dev"));
+assert.equal(normalizeDeveloperName("Ilford ID-11"), normalizeDeveloperName("ID-11"));
+assert.equal(normalizeDeveloperName("Ilford ILFOTEC LC29"), normalizeDeveloperName("Ilfotec LC29"));
+
+const fp4 = mergedFilms.find((f) => f.normalized === "ilford fp4 plus");
+assert.ok(getRecipesForFilm(fp4, byFilm).length > 0, "Verified film should return recipes");
+const hp5 = mergedFilms.find((f) => f.normalized === "ilford hp5 plus");
+assert.equal(getRecipesForFilm(hp5, byFilm).length, 0, "Unverified film should return empty recipe list to trigger Custom Recipe");
+
+console.log(`Recipe catalog tests passed (${catalog.recipes.length} recipes, ${catalog.sources.length} sources, ${mergedFilms.length} films, ${mergedDevelopers.length} developers).`);

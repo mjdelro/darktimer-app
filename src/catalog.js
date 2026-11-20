@@ -1,3 +1,6 @@
+import { BW_FILMS } from "./data/films.js";
+import { BW_DEVELOPERS } from "./data/developers.js";
+
 const CATALOG_URL = "./data/recipes.json";
 
 const FILM_NAME_ALIASES = {
@@ -18,6 +21,27 @@ const FILM_NAME_ALIASES = {
   "holga 400": "foma holga 400"
 };
 
+const DEVELOPER_NAME_ALIASES = {
+  "kodak xtol": "xtol",
+  "kodak d 76": "d 76",
+  "kodak hc 110": "hc 110",
+  "kodak tmax developer": "tmax dev",
+  "kodak tmax dev": "tmax dev",
+  "kodak tmax rs": "tmax rs",
+  "kodak dektol": "dektol",
+  "kodak microdol x": "microdol x",
+  "ilford id 11": "id 11",
+  "ilford ilfotec lc29": "ilfotec lc29",
+  "ilford ilfotec dd": "ilfotec dd",
+  "ilford ilfotec dd x": "ilfotec dd x",
+  "ilford ilfotec hc": "ilfotec hc",
+  "ilford ilfotec rt rapid": "ilfotec rt rapid",
+  "ilford ilfosol 3": "ilfosol 3",
+  "ilford microphen": "microphen",
+  "ilford perceptol": "perceptol",
+  "ilford pq universal": "pq universal"
+};
+
 export function normalizeFilmName(name) {
   const cleaned = String(name || "")
     .toLowerCase()
@@ -30,6 +54,16 @@ export function normalizeFilmName(name) {
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
   return FILM_NAME_ALIASES[cleaned] || cleaned;
+}
+
+export function normalizeDeveloperName(name) {
+  const cleaned = String(name || "")
+    .toLowerCase()
+    .replace(/\+/g, " plus ")
+    .replace(/\bt[\s-]*max\b/g, "tmax")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  return DEVELOPER_NAME_ALIASES[cleaned] || cleaned;
 }
 
 export async function loadCustomCatalog() {
@@ -50,6 +84,7 @@ export async function loadCustomCatalog() {
     const normalizedRecipe = {
       ...recipe,
       id: `verified-${index}`,
+      normalizedDeveloper: normalizeDeveloperName(recipe.developer),
       temperatureC: Number(recipe.temperatureC) || 20,
       ei: Number.isFinite(Number(recipe.ei)) ? Number(recipe.ei) : null,
       format: recipe.format || "any",
@@ -64,9 +99,9 @@ export async function loadCustomCatalog() {
       byFilm.set(normalizedFilm, []);
       filmEntries.push({
         normalized: normalizedFilm,
-        key: `verified:${normalizedFilm}`,
+        key: `film:${normalizedFilm}`,
         fullName: recipe.film,
-        isCustomOnly: false
+        hasVerifiedRecipes: true
       });
     }
     byFilm.get(normalizedFilm).push(normalizedRecipe);
@@ -75,17 +110,76 @@ export async function loadCustomCatalog() {
   return { byFilm, filmEntries };
 }
 
-export async function loadFilmList(filmEntries) {
-  const films = filmEntries
-    .map((entry) => ({ key: entry.key, fullName: entry.fullName, isCustomOnly: false }))
-    .sort((a, b) => a.fullName.localeCompare(b.fullName));
-  return { mode: "local", films };
+export function buildFilmList(filmEntries = []) {
+  const byNormalized = new Map();
+
+  for (const entry of filmEntries) {
+    byNormalized.set(entry.normalized, {
+      key: entry.key || `film:${entry.normalized}`,
+      normalized: entry.normalized,
+      fullName: entry.fullName,
+      hasVerifiedRecipes: true
+    });
+  }
+
+  for (const filmName of BW_FILMS) {
+    const normalized = normalizeFilmName(filmName);
+    if (!byNormalized.has(normalized)) {
+      byNormalized.set(normalized, {
+        key: `film:${normalized}`,
+        normalized,
+        fullName: filmName,
+        hasVerifiedRecipes: false
+      });
+    }
+  }
+
+  return [...byNormalized.values()].sort((a, b) => a.fullName.localeCompare(b.fullName));
 }
 
-export async function loadRecipesForFilm(film, catalogByFilm) {
-  if (!film) return [];
-  return (catalogByFilm.get(normalizeFilmName(film.fullName)) || []).map((recipe) => ({
+export function buildDeveloperList(catalogByFilm = new Map()) {
+  const byNormalized = new Map();
+
+  for (const recipes of catalogByFilm.values()) {
+    for (const recipe of recipes) {
+      const normalized = recipe.normalizedDeveloper || normalizeDeveloperName(recipe.developer);
+      if (!byNormalized.has(normalized)) {
+        byNormalized.set(normalized, {
+          key: `dev:${normalized}`,
+          normalized,
+          name: recipe.developer
+        });
+      }
+    }
+  }
+
+  for (const devName of BW_DEVELOPERS) {
+    const normalized = normalizeDeveloperName(devName);
+    if (!byNormalized.has(normalized)) {
+      byNormalized.set(normalized, {
+        key: `dev:${normalized}`,
+        normalized,
+        name: devName
+      });
+    }
+  }
+
+  return [...byNormalized.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function getRecipesForFilm(film, catalogByFilm) {
+  if (!film || !catalogByFilm) return [];
+  const normalized = film.normalized || normalizeFilmName(film.fullName);
+  return (catalogByFilm.get(normalized) || []).map((recipe) => ({
     ...recipe,
     filmKey: film.key
   }));
+}
+
+export async function loadFilmList(filmEntries) {
+  return { mode: "local", films: buildFilmList(filmEntries) };
+}
+
+export async function loadRecipesForFilm(film, catalogByFilm) {
+  return getRecipesForFilm(film, catalogByFilm);
 }

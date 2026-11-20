@@ -1,5 +1,10 @@
 import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
-import { loadCustomCatalog, loadFilmList, loadRecipesForFilm } from "./catalog.js";
+import {
+  buildDeveloperList,
+  buildFilmList,
+  getRecipesForFilm,
+  loadCustomCatalog
+} from "./catalog.js";
 import {
   AGITATION_PRESETS,
   agitationMarkersFor,
@@ -16,7 +21,7 @@ import {
   temperatureToCelsius,
   WASH_OPTIONS
 } from "./process.js";
-import { playDing, playStepComplete, playTick } from "./audio.js";
+import { playDing, playStepComplete, playTick, unlockAudio } from "./audio.js";
 import {
   AGITATION_SUBMISSION_OPTIONS,
   buildRecipeIssueUrl,
@@ -24,7 +29,26 @@ import {
 } from "./submission.js";
 
 const FORMAT_NAMES = { any: "Any format", "135": "35mm", "120": "120", sheet: "Sheet" };
-const CUSTOM_RECIPE_KEY = "custom-recipe";
+const CUSTOM_FILM_KEY = "__custom_film__";
+const CUSTOM_DEVELOPER_KEY = "__custom_developer__";
+const CUSTOM_RECIPE_ID = "custom-recipe";
+const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function trapDialogFocus(event, container) {
+  if (event.key !== "Tab" || !container) return;
+  const focusable = [...container.querySelectorAll(FOCUSABLE_SELECTOR)]
+    .filter((element) => !element.hidden && element.getAttribute("aria-hidden") !== "true");
+  if (focusable.length === 0) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
 
 function localDateValue(date = new Date()) {
   const year = date.getFullYear();
@@ -106,13 +130,11 @@ export default function App() {
     onCleanup(() => { document.body.style.overflow = previousOverflow; });
   });
 
-  // Catalog state
+  // Catalog state (pre-populated with curated B&W film and developer pickers)
   const [catalogMode, setCatalogMode] = createSignal("loading");
   const [catalogError, setCatalogError] = createSignal("");
-  const [films, setFilms] = createSignal([]);
+  const [films, setFilms] = createSignal(buildFilmList([]));
   const [customByFilm, setCustomByFilm] = createSignal(new Map());
-  const [filmRecipes, setFilmRecipes] = createSignal([]);
-  const [loadingRecipes, setLoadingRecipes] = createSignal(false);
 
   // 01 Presoak
   const [presoakEnabled, setPresoakEnabled] = createSignal(false);
@@ -121,7 +143,7 @@ export default function App() {
 
   // 02 Film & Developer
   const [selectedFilmKey, setSelectedFilmKey] = createSignal("");
-  const [selectedDeveloper, setSelectedDeveloper] = createSignal("");
+  const [selectedDeveloperKey, setSelectedDeveloperKey] = createSignal("");
   const [selectedDilution, setSelectedDilution] = createSignal("");
   const [selectedRecipeId, setSelectedRecipeId] = createSignal("");
   const [customFilmName, setCustomFilmName] = createSignal("");
@@ -159,25 +181,63 @@ export default function App() {
   let pausedAt = 0;
   let pausedTotal = 0;
   let lastTickBoundary = 0;
+  let lastRenderedElapsed = -1;
   let timerId = null;
+  let wakeLockSentinel = null;
   let hintDialog;
   let hintCloseButton;
 
+  async function releaseWakeLock() {
+    if (!wakeLockSentinel) return;
+    try {
+      await wakeLockSentinel.release();
+    } catch {
+      // Ignore release errors when already inactive
+    }
+    wakeLockSentinel = null;
+  }
+
+  async function requestWakeLock() {
+    if (!navigator.wakeLock || wakeLockSentinel) return;
+    try {
+      wakeLockSentinel = await navigator.wakeLock.request("screen");
+      wakeLockSentinel.addEventListener("release", () => { wakeLockSentinel = null; });
+    } catch {
+      // Ignore if wake lock is denied or unsupported in the current context
+    }
+  }
+
   onMount(async () => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && screen() === "timer" && !isPaused() && !waitingForPour()) {
+        requestWakeLock();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    onCleanup(() => document.removeEventListener("visibilitychange", handleVisibilityChange));
+
     try {
       const { byFilm, filmEntries } = await loadCustomCatalog();
       setCustomByFilm(byFilm);
-      const { mode, films: list } = await loadFilmList(filmEntries);
-      setCatalogMode(mode);
-      setFilms(list);
+      setFilms(buildFilmList(filmEntries));
+      setCatalogMode("local");
     } catch (error) {
       setCatalogMode("error");
       setCatalogError(error instanceof Error ? error.message : "The recipe catalog could not be loaded.");
     }
   });
 
+  createEffect(() => {
+    if (screen() === "timer" && !isPaused() && !waitingForPour()) {
+      requestWakeLock();
+    } else {
+      releaseWakeLock();
+    }
+  });
+
   onCleanup(() => {
     if (timerId !== null) window.clearInterval(timerId);
+    releaseWakeLock();
   });
 
   createEffect(() => {
@@ -189,18 +249,7 @@ export default function App() {
         setActiveHint(null);
         return;
       }
-      if (event.key !== "Tab" || !hintDialog) return;
-      const focusable = [...hintDialog.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')];
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
+      trapDialogFocus(event, hintDialog);
     };
     document.addEventListener("keydown", handleModalKeys);
     window.queueMicrotask(() => hintCloseButton?.focus());
@@ -210,62 +259,134 @@ export default function App() {
     });
   });
 
-  const isCustomRecipe = createMemo(() => selectedFilmKey() === CUSTOM_RECIPE_KEY);
-  const selectedFilm = createMemo(() => films().find((f) => f.key === selectedFilmKey()) || null);
-  const catalogDeveloperNames = createMemo(() => {
-    const names = new Set();
-    for (const recipes of customByFilm().values()) {
-      for (const recipe of recipes) names.add(recipe.developer);
-    }
-    return [...names].sort((a, b) => a.localeCompare(b));
-  });
+  const filmByKey = createMemo(() => new Map(films().map((f) => [f.key, f])));
+  const allDevelopers = createMemo(() => buildDeveloperList(customByFilm()));
+  const developerByKey = createMemo(() => new Map(allDevelopers().map((d) => [d.key, d])));
 
-  createEffect(async () => {
+  const isCustomFilm = createMemo(() => selectedFilmKey() === CUSTOM_FILM_KEY);
+  const isCustomDeveloper = createMemo(() => selectedDeveloperKey() === CUSTOM_DEVELOPER_KEY);
+  const selectedFilm = createMemo(() => filmByKey().get(selectedFilmKey()) || null);
+  const selectedDeveloperEntry = createMemo(() => developerByKey().get(selectedDeveloperKey()) || null);
+
+  const filmRecipes = createMemo(() => {
     const film = selectedFilm();
-    setSelectedDeveloper("");
-    setSelectedDilution("");
-    setSelectedRecipeId("");
-    if (!film) {
-      setFilmRecipes([]);
-      return;
-    }
-    setLoadingRecipes(true);
-    const loaded = await loadRecipesForFilm(film, customByFilm(), catalogMode());
-    setFilmRecipes(loaded);
-    setLoadingRecipes(false);
+    if (!film) return [];
+    return getRecipesForFilm(film, customByFilm());
   });
 
-  const developers = createMemo(() =>
-    [...new Set(filmRecipes().map((r) => r.developer))].sort((a, b) => a.localeCompare(b))
+  const verifiedDeveloperKeysForFilm = createMemo(() =>
+    new Set(filmRecipes().map((r) => `dev:${r.normalizedDeveloper}`))
   );
+
+  const verifiedDevelopersForFilm = createMemo(() => {
+    const keys = verifiedDeveloperKeysForFilm();
+    if (keys.size === 0) return [];
+    return allDevelopers().filter((d) => keys.has(d.key));
+  });
+
+  const otherDevelopersForFilm = createMemo(() => {
+    const keys = verifiedDeveloperKeysForFilm();
+    if (keys.size === 0) return allDevelopers();
+    return allDevelopers().filter((d) => !keys.has(d.key));
+  });
+
+  const variants = createMemo(() => {
+    const dev = selectedDeveloperEntry();
+    if (!dev) return [];
+    return filmRecipes()
+      .filter((r) => r.normalizedDeveloper === dev.normalized)
+      .sort((a, b) =>
+        a.dilution.localeCompare(b.dilution)
+        || ((a.ei || 0) - (b.ei || 0))
+        || (a.temperatureC - b.temperatureC)
+        || (a.seconds - b.seconds)
+      );
+  });
 
   const dilutions = createMemo(() =>
-    [...new Set(filmRecipes().filter((r) => r.developer === selectedDeveloper()).map((r) => r.dilution))]
-      .sort((a, b) => a.localeCompare(b))
+    [...new Set(variants().map((r) => r.dilution))].sort((a, b) => a.localeCompare(b))
   );
 
-  const variants = createMemo(() =>
-    filmRecipes()
-      .filter((r) => r.developer === selectedDeveloper() && r.dilution === selectedDilution())
-      .sort((a, b) => ((a.ei || 0) - (b.ei || 0)) || (a.temperatureC - b.temperatureC) || (a.seconds - b.seconds))
+  const hasFilmAndDeveloper = createMemo(() => Boolean(selectedFilmKey() && selectedDeveloperKey()));
+  const hasVerifiedRecipes = createMemo(() => variants().length > 0);
+  const isCustomRecipe = createMemo(() => Boolean(
+    hasFilmAndDeveloper() && (!hasVerifiedRecipes() || selectedRecipeId() === CUSTOM_RECIPE_ID)
+  ));
+
+  const selectedRecipe = createMemo(() =>
+    selectedRecipeId() === CUSTOM_RECIPE_ID
+      ? null
+      : variants().find((r) => String(r.id) === selectedRecipeId()) || null
   );
 
-  const selectedRecipe = createMemo(() => variants().find((r) => String(r.id) === selectedRecipeId()) || null);
+  function handleFilmChange(nextFilmKey) {
+    setSelectedFilmKey(nextFilmKey);
+    setSelectedDeveloperKey("");
+    setSelectedDilution("");
+    setSelectedRecipeId("");
+    setCustomDilution("");
+  }
+
+  function handleDeveloperChange(nextDevKey) {
+    setSelectedDeveloperKey(nextDevKey);
+    setSelectedDilution("");
+    setSelectedRecipeId("");
+  }
+
+  function handleVariantChange(nextVariantId) {
+    setSelectedRecipeId(nextVariantId);
+    if (nextVariantId === CUSTOM_RECIPE_ID) {
+      if (!customDilution() && selectedDilution()) {
+        setCustomDilution(selectedDilution());
+      }
+      return;
+    }
+    const rec = variants().find((r) => String(r.id) === nextVariantId);
+    if (rec) setSelectedDilution(rec.dilution);
+  }
+
+  function handleDilutionChange(nextDilution) {
+    setSelectedDilution(nextDilution);
+    if (!nextDilution) {
+      setSelectedRecipeId("");
+      return;
+    }
+    const current = selectedRecipe();
+    if (current && current.dilution === nextDilution) return;
+    const match = variants().find((r) => r.dilution === nextDilution);
+    setSelectedRecipeId(match ? String(match.id) : "");
+  }
 
   createEffect(() => {
+    if (!hasFilmAndDeveloper()) return;
     const list = variants();
-    if (list.length === 1) {
+    if (list.length === 0) {
+      if (selectedRecipeId() !== CUSTOM_RECIPE_ID) {
+        setSelectedRecipeId(CUSTOM_RECIPE_ID);
+      }
+      return;
+    }
+    if (list.length === 1 && !selectedRecipeId()) {
       setSelectedRecipeId(String(list[0].id));
+      setSelectedDilution(list[0].dilution);
     }
   });
 
   createEffect(() => {
     const rec = selectedRecipe();
     if (!rec) return;
+    setSelectedDilution(rec.dilution);
     setDevMinutes(Math.floor(rec.seconds / 60));
     setDevSeconds(rec.seconds % 60);
     if (AGITATION_PRESETS[rec.agitation]) setDevAgitation(rec.agitation);
   });
+
+  const resolvedFilmName = createMemo(() =>
+    isCustomFilm() ? customFilmName().trim() : (selectedFilm()?.fullName || "")
+  );
+  const resolvedDeveloperName = createMemo(() =>
+    isCustomDeveloper() ? customDeveloperName().trim() : (selectedDeveloperEntry()?.name || "")
+  );
 
   const totalDevSeconds = createMemo(() => Math.max(1, Number(devMinutes()) * 60 + Number(devSeconds())));
   const customTemperatureValue = createMemo(() => {
@@ -278,8 +399,8 @@ export default function App() {
     : { min: "0.1", max: "50", message: "Enter a temperature above 0°C and no more than 50°C." });
   const customRecipeError = createMemo(() => {
     if (!isCustomRecipe()) return "";
-    if (!customFilmName().trim()) return "Enter a custom film name.";
-    if (!customDeveloperName().trim()) return "Enter a custom developer name.";
+    if (!resolvedFilmName()) return "Enter a custom film name.";
+    if (!resolvedDeveloperName()) return "Enter a custom developer name.";
     if (!customDilution().trim()) return "Enter the custom developer dilution.";
     if (!Number.isInteger(Number(customEi())) || Number(customEi()) <= 0) return "Enter a positive whole-number EI.";
     if (!Number.isFinite(Number(customTemperatureC())) || Number(customTemperatureC()) <= 0 || Number(customTemperatureC()) > 50) return customTemperatureLimits().message;
@@ -287,9 +408,9 @@ export default function App() {
   });
   const effectiveRecipe = createMemo(() => isCustomRecipe()
     ? {
-        id: "custom-recipe",
-        film: customFilmName().trim(),
-        developer: customDeveloperName().trim(),
+        id: CUSTOM_RECIPE_ID,
+        film: resolvedFilmName(),
+        developer: resolvedDeveloperName(),
         dilution: customDilution().trim(),
         seconds: totalDevSeconds(),
         temperatureC: Math.round(Number(customTemperatureC()) * 10) / 10,
@@ -316,7 +437,7 @@ export default function App() {
   const formatRecipeOption = (r) => {
     const fmt = FORMAT_NAMES[r.format] || r.format || "Any format";
     const iso = r.ei ? `ISO ${r.ei}` : "Listed speed";
-    return `${fmt} · ${iso} · ${formatTemp(r.temperatureC)} · ${formatTime(r.seconds)}`;
+    return `${r.dilution} · ${fmt} · ${iso} · ${formatTemp(r.temperatureC)} · ${formatTime(r.seconds)}`;
   };
 
   const recipeReference = createMemo(() => {
@@ -360,8 +481,8 @@ export default function App() {
       presoakEnabled: presoakEnabled(),
       presoakMode: presoakMode(),
       presoakSeconds: Math.max(1, Number(presoakMinutes())) * 60,
-      filmName: effectiveRecipe()?.film || selectedFilm()?.fullName || "Select film",
-      developerName: effectiveRecipe()?.developer || selectedDeveloper() || "Developer",
+      filmName: effectiveRecipe()?.film || resolvedFilmName() || "Select film",
+      developerName: effectiveRecipe()?.developer || resolvedDeveloperName() || "Developer",
       dilution: effectiveRecipe()?.dilution || selectedDilution(),
       devSeconds: totalDevSeconds(),
       devAgitation: devAgitation(),
@@ -431,18 +552,22 @@ export default function App() {
 
   function runCurrentStepClock() {
     stopTicker();
+    if (soundEnabled()) unlockAudio();
     setWaitingForPour(false);
     setIsPaused(false);
     setElapsedSeconds(0);
     startedAt = Date.now();
     pausedTotal = 0;
     lastTickBoundary = 0;
+    lastRenderedElapsed = 0;
 
     timerId = window.setInterval(() => {
       if (isPaused()) return;
       const step = currentStep();
       if (!step) return;
       const elapsed = Math.max(0, Math.floor((Date.now() - startedAt - pausedTotal) / 1000));
+      if (elapsed === lastRenderedElapsed) return;
+      lastRenderedElapsed = elapsed;
       setElapsedSeconds(elapsed);
 
       const boundary = Math.floor(elapsed / 10) * 10;
@@ -473,6 +598,7 @@ export default function App() {
   function startProcess(e) {
     e.preventDefault();
     if (!canStart()) return;
+    if (soundEnabled()) unlockAudio();
     setActiveSteps(plannedSteps());
     setStepIndex(0);
     setScreen("timer");
@@ -535,21 +661,7 @@ export default function App() {
       closeSubmitModal();
       return;
     }
-    if (event.key !== "Tab" || !submitDialog) return;
-
-    const focusable = [...submitDialog.querySelectorAll(
-      "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])"
-    )].filter((element) => !element.hidden && element.getAttribute("aria-hidden") !== "true");
-    if (focusable.length === 0) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
+    trapDialogFocus(event, submitDialog);
   }
 
   function handleRecipeIssueSubmit(e) {
@@ -631,8 +743,8 @@ export default function App() {
               </h1>
               <p>A black-and-white film development timer with dilution mixing math, audio cues, and chained agitation prompts from presoak through Photo-Flo.</p>
               <ol class="setup-howto">
-                <li>Choose presoak, film, developer, dilution, and tank capacity to calculate your developer and water mix.</li>
-                <li>Pick a verified recipe, or choose Custom recipe and enter the film, developer, dilution, and timing yourself.</li>
+                <li>Choose presoak, film, developer, recipe variant, dilution, and tank capacity to calculate your developer and water mix.</li>
+                <li>Pick a verified recipe variant, or use Custom Recipe (enabled automatically when no verified recipe is available) to enter your own dilution and timing.</li>
                 <li>Press <strong>Start Development Process</strong> and follow the VFD timer, agitation pips, and pour prompts between stages.</li>
               </ol>
 
@@ -732,56 +844,83 @@ export default function App() {
               <div class="stage-card">
                 <div class="stage-row">
                   <label class="stage-label" for="filmSelect"><span class="stage-num">02</span> Film</label>
-                  <select id="filmSelect" value={selectedFilmKey()} onChange={(e) => setSelectedFilmKey(e.currentTarget.value)} disabled={catalogMode() === "loading"}>
-                    <option value="">{catalogMode() === "loading" ? "Loading films..." : catalogMode() === "error" ? "Catalog unavailable; use Custom recipe" : films().length === 0 ? "No verified recipes available" : "Select film"}</option>
+                  <select id="filmSelect" value={selectedFilmKey()} onChange={(e) => handleFilmChange(e.currentTarget.value)}>
+                    <option value="">Select film</option>
                     <For each={films()}>{(f) => <option value={f.key}>{f.fullName}</option>}</For>
-                    <option value={CUSTOM_RECIPE_KEY}>Custom recipe (enter film and developer)</option>
+                    <option value={CUSTOM_FILM_KEY}>Custom film (enter name)</option>
                   </select>
                 </div>
-                <Show when={isCustomRecipe()}>
+                <Show when={isCustomFilm()}>
                   <div class="custom-recipe-fields">
                     <label for="customFilmName">Custom film name *</label>
-                    <input id="customFilmName" list="film-name-suggestions" type="text" required placeholder="Enter the film product name" value={customFilmName()} onInput={(e) => setCustomFilmName(e.currentTarget.value)} />
-                    <datalist id="film-name-suggestions">
-                      <For each={films()}>{(film) => <option value={film.fullName} />}</For>
-                    </datalist>
+                    <input id="customFilmName" type="text" required placeholder="Enter the film product name" value={customFilmName()} onInput={(e) => setCustomFilmName(e.currentTarget.value)} />
                   </div>
                 </Show>
                 <Show when={catalogMode() === "error"}>
-                  <p class="catalog-error" role="alert">Could not load the recipe catalog. {catalogError()} <button type="button" onClick={() => window.location.reload()}>Reload</button></p>
+                  <p class="catalog-error" role="alert">Could not load the verified recipe catalog. You can still use any film and developer with a Custom Recipe. {catalogError()} <button type="button" onClick={() => window.location.reload()}>Reload</button></p>
                 </Show>
               </div>
 
-              {/* 03 Developer, Dilution & Recipe */}
+              {/* 03 Developer, Recipe Variant, Dilution & Tank */}
               <div class="stage-card">
                 <div class="stage-row">
-                  <label class="stage-label" for={isCustomRecipe() ? "customDeveloperName" : "devSelect"}><span class="stage-num">03</span> Developer</label>
-                  <Show
-                    when={!isCustomRecipe()}
-                    fallback={
-                      <>
-                        <input id="customDeveloperName" list="developer-name-suggestions" type="text" required placeholder="Enter the developer product name" value={customDeveloperName()} onInput={(e) => setCustomDeveloperName(e.currentTarget.value)} />
-                        <datalist id="developer-name-suggestions">
-                          <For each={catalogDeveloperNames()}>{(developer) => <option value={developer} />}</For>
-                        </datalist>
-                      </>
-                    }
-                  >
-                    <select id="devSelect" value={selectedDeveloper()} onChange={(e) => { setSelectedDeveloper(e.currentTarget.value); setSelectedDilution(""); setSelectedRecipeId(""); }} disabled={developers().length === 0 || loadingRecipes()}>
-                      <option value="">{loadingRecipes() ? "Loading…" : "Select developer"}</option>
-                      <For each={developers()}>{(d) => <option value={d}>{d}</option>}</For>
-                    </select>
-                  </Show>
+                  <label class="stage-label" for="devSelect"><span class="stage-num">03</span> Developer</label>
+                  <select id="devSelect" value={selectedDeveloperKey()} onChange={(e) => handleDeveloperChange(e.currentTarget.value)} disabled={!selectedFilmKey()}>
+                    <option value="">Select developer</option>
+                    <Show
+                      when={verifiedDevelopersForFilm().length > 0}
+                      fallback={<For each={allDevelopers()}>{(d) => <option value={d.key}>{d.name}</option>}</For>}
+                    >
+                      <optgroup label="Verified recipes for this film">
+                        <For each={verifiedDevelopersForFilm()}>{(d) => <option value={d.key}>{d.name}</option>}</For>
+                      </optgroup>
+                      <optgroup label="All B&W developers (Custom Recipe)">
+                        <For each={otherDevelopersForFilm()}>{(d) => <option value={d.key}>{d.name}</option>}</For>
+                      </optgroup>
+                    </Show>
+                    <option value={CUSTOM_DEVELOPER_KEY}>Custom developer (enter name)</option>
+                  </select>
                 </div>
 
+                <Show when={isCustomDeveloper()}>
+                  <div class="custom-recipe-fields">
+                    <label for="customDeveloperName">Custom developer name *</label>
+                    <input id="customDeveloperName" type="text" required placeholder="Enter the developer product name" value={customDeveloperName()} onInput={(e) => setCustomDeveloperName(e.currentTarget.value)} />
+                  </div>
+                </Show>
+
                 <div class="sub-fields">
+                  <div class="sub-field sub-field-full">
+                    <label for="recipeSelect">Recipe Variant</label>
+                    <select
+                      id="recipeSelect"
+                      value={selectedRecipeId()}
+                      onChange={(e) => handleVariantChange(e.currentTarget.value)}
+                      disabled={!hasFilmAndDeveloper()}
+                    >
+                      <Show
+                        when={hasFilmAndDeveloper()}
+                        fallback={<option value="">Select film and developer</option>}
+                      >
+                        <Show
+                          when={hasVerifiedRecipes()}
+                          fallback={<option value={CUSTOM_RECIPE_ID}>Custom Recipe (no verified recipe available)</option>}
+                        >
+                          <option value="">Select recipe</option>
+                          <For each={variants()}>{(r) => <option value={String(r.id)}>{formatRecipeOption(r)}</option>}</For>
+                          <option value={CUSTOM_RECIPE_ID}>Custom Recipe</option>
+                        </Show>
+                      </Show>
+                    </select>
+                  </div>
+
                   <div class="sub-field">
                     <button class="hint-sub-button" type="button" onClick={() => setActiveHint("dilution")} title="How to read dilutions">Dilution</button>
                     <Show
                       when={!isCustomRecipe()}
-                      fallback={<input id="customDilution" aria-label="Custom developer dilution" type="text" required placeholder="Required, for example 1+50 or Stock" value={customDilution()} onInput={(e) => setCustomDilution(e.currentTarget.value)} />}
+                      fallback={<input id="customDilution" aria-label="Custom developer dilution" type="text" required placeholder="e.g. 1+50 or Stock" value={customDilution()} onInput={(e) => setCustomDilution(e.currentTarget.value)} />}
                     >
-                      <select id="dilSelect" aria-label="Dilution" value={selectedDilution()} onChange={(e) => { setSelectedDilution(e.currentTarget.value); setSelectedRecipeId(""); }} disabled={dilutions().length === 0}>
+                      <select id="dilSelect" aria-label="Dilution" value={selectedDilution()} onChange={(e) => handleDilutionChange(e.currentTarget.value)} disabled={dilutions().length === 0}>
                         <option value="">Select dilution</option>
                         <For each={dilutions()}>{(d) => <option value={d}>{d}</option>}</For>
                       </select>
@@ -825,16 +964,6 @@ export default function App() {
                         value={customTemperatureValue()}
                         onInput={(e) => updateCustomTemperature(e.currentTarget.value)}
                       />
-                    </div>
-                  </Show>
-
-                  <Show when={!isCustomRecipe()}>
-                    <div class="sub-field sub-field-full">
-                      <label for="recipeSelect">Recipe Variant</label>
-                      <select id="recipeSelect" value={selectedRecipeId()} onChange={(e) => setSelectedRecipeId(e.currentTarget.value)} disabled={variants().length === 0}>
-                        <option value="">Select recipe</option>
-                        <For each={variants()}>{(r) => <option value={String(r.id)}>{formatRecipeOption(r)}</option>}</For>
-                      </select>
                     </div>
                   </Show>
 
