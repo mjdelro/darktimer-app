@@ -141,8 +141,20 @@ footer {
   padding: clamp(20px, 3.5vw, 44px) clamp(14px, 3vw, 32px);
   display: grid;
   grid-template-columns: minmax(0, 0.76fr) minmax(380px, 1.24fr);
-  gap: 28px clamp(24px, 4vw, 48px);
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "copy panel"
+    "chain panel";
+  gap: 22px clamp(24px, 4vw, 48px);
   align-items: start;
+}
+
+.setup-copy {
+  grid-area: copy;
+}
+
+.process-panel {
+  grid-area: panel;
 }
 
 .setup-copy h1 {
@@ -269,7 +281,7 @@ footer {
 }
 
 .chain-preview {
-  margin-top: 22px;
+  grid-area: chain;
   padding: 16px;
   border: 1px solid #454741;
   background:
@@ -1563,6 +1575,11 @@ footer {
 @media (max-width: 860px) {
   .setup-screen {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    grid-template-areas:
+      "copy"
+      "panel"
+      "chain";
   }
 }
 

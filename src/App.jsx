@@ -713,27 +713,27 @@ export default function App() {
                 </ul>
               </details>
               <p class="safety-callout"><strong>Safety:</strong> Follow the product label and Safety Data Sheet (SDS) first. Use appropriate PPE, ventilate your workspace, and follow local disposal rules.</p>
+            </div>
 
-              <div class="chain-preview">
-                <div class="chain-preview-header">
-                  <span>Process Chain ({plannedSteps().length} steps)</span>
-                  <span>Total {formatTime(totalProcessSeconds())}</span>
-                </div>
-                <ol class="chain-list">
-                  <For each={plannedSteps()}>
-                    {(step) => (
-                      <li class="chain-item">
-                        <span class="chain-stage">{step.stage}</span>
-                        <span class="chain-name">
-                          <strong>{step.name}</strong>
-                          <span class="chain-sub">{step.subtitle}</span>
-                        </span>
-                        <span class="chain-time">{formatTime(step.seconds)}</span>
-                      </li>
-                    )}
-                  </For>
-                </ol>
+            <div class="chain-preview">
+              <div class="chain-preview-header">
+                <span>Process Chain ({plannedSteps().length} steps)</span>
+                <span>Total {formatTime(totalProcessSeconds())}</span>
               </div>
+              <ol class="chain-list">
+                <For each={plannedSteps()}>
+                  {(step) => (
+                    <li class="chain-item">
+                      <span class="chain-stage">{step.stage}</span>
+                      <span class="chain-name">
+                        <strong>{step.name}</strong>
+                        <span class="chain-sub">{step.subtitle}</span>
+                      </span>
+                      <span class="chain-time">{formatTime(step.seconds)}</span>
+                    </li>
+                  )}
+                </For>
+              </ol>
             </div>
 
             <form class="process-panel" onSubmit={startProcess}>
