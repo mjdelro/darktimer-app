@@ -626,6 +626,7 @@ export default function App() {
     setActiveSteps(plannedSteps());
     setStepIndex(0);
     setScreen("timer");
+    window.scrollTo(0, 0);
     runCurrentStepClock();
   }
 
