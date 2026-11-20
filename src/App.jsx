@@ -1218,12 +1218,12 @@ export default function App() {
                   when={soundEnabled()}
                   fallback={
                     <svg class="vcr-icon" viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M3 9v6h4l5 4V5L7 9H3Zm13.6 3 2.9 2.9-1.4 1.4L15.2 13.4l-2.9 2.9-1.4-1.4 2.9-2.9-2.9-2.9 1.4-1.4 2.9 2.9 2.9-2.9 1.4 1.4-2.9 2.9Z" />
+                      <path d="M3 9v6h4l5 4V5L7 9H3Zm13.5 3a4.5 4.5 0 0 0-2.5-4.03v8.05A4.5 4.5 0 0 0 16.5 12ZM14 3.23v2.06a7 7 0 0 1 0 13.42v2.06a9 9 0 0 0 0-17.54Z" />
                     </svg>
                   }
                 >
                   <svg class="vcr-icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M3 9v6h4l5 4V5L7 9H3Zm13.5 3a4.5 4.5 0 0 0-2.5-4.03v8.05A4.5 4.5 0 0 0 16.5 12ZM14 3.23v2.06a7 7 0 0 1 0 13.42v2.06a9 9 0 0 0 0-17.54Z" />
+                    <path d="M3 9v6h4l5 4V5L7 9H3Zm13.6 3 2.9 2.9-1.4 1.4L15.2 13.4l-2.9 2.9-1.4-1.4 2.9-2.9-2.9-2.9 1.4-1.4 2.9 2.9 2.9-2.9 1.4 1.4-2.9 2.9Z" />
                   </svg>
                 </Show>
               </button>
