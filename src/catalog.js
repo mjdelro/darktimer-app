@@ -112,23 +112,30 @@ export async function loadCustomCatalog() {
 
 export function buildFilmList(filmEntries = []) {
   const byNormalized = new Map();
+  const curatedIsoByNormalized = new Map();
+
+  for (const [filmName, defaultIso] of BW_FILMS) {
+    curatedIsoByNormalized.set(normalizeFilmName(filmName), defaultIso);
+  }
 
   for (const entry of filmEntries) {
     byNormalized.set(entry.normalized, {
       key: entry.key || `film:${entry.normalized}`,
       normalized: entry.normalized,
       fullName: entry.fullName,
+      defaultIso: curatedIsoByNormalized.get(entry.normalized) ?? 400,
       hasVerifiedRecipes: true
     });
   }
 
-  for (const filmName of BW_FILMS) {
+  for (const [filmName, defaultIso] of BW_FILMS) {
     const normalized = normalizeFilmName(filmName);
     if (!byNormalized.has(normalized)) {
       byNormalized.set(normalized, {
         key: `film:${normalized}`,
         normalized,
         fullName: filmName,
+        defaultIso,
         hasVerifiedRecipes: false
       });
     }

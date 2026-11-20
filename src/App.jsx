@@ -325,6 +325,8 @@ export default function App() {
     setSelectedDilution("");
     setSelectedRecipeId("");
     setCustomDilution("");
+    const nextFilm = filmByKey().get(nextFilmKey);
+    setCustomEi(nextFilm?.defaultIso ? String(nextFilm.defaultIso) : "400");
   }
 
   function handleDeveloperChange(nextDevKey) {

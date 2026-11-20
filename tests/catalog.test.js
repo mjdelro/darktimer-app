@@ -103,7 +103,14 @@ assert.equal(normalizeDeveloperName("Ilford ILFOTEC LC29"), normalizeDeveloperNa
 
 const fp4 = mergedFilms.find((f) => f.normalized === "ilford fp4 plus");
 assert.ok(getRecipesForFilm(fp4, byFilm).length > 0, "Verified film should return recipes");
+assert.equal(fp4.defaultIso, 125, "Ilford FP4 Plus default ISO should be 125");
+const tmax100 = mergedFilms.find((f) => f.normalized === "kodak tmax 100");
+assert.equal(tmax100.defaultIso, 100, "Kodak T-MAX 100 default ISO should be 100");
 const hp5 = mergedFilms.find((f) => f.normalized === "ilford hp5 plus");
 assert.equal(getRecipesForFilm(hp5, byFilm).length, 0, "Unverified film should return empty recipe list to trigger Custom Recipe");
+assert.equal(hp5.defaultIso, 400, "Ilford HP5+ default ISO should be 400");
+const delta3200 = mergedFilms.find((f) => f.normalized === "ilford delta 3200");
+assert.equal(delta3200.defaultIso, 3200, "Ilford Delta 3200 default ISO should be 3200");
+assert.ok(mergedFilms.every((f) => Number.isInteger(f.defaultIso) && f.defaultIso > 0), "Every film should have a positive integer default ISO");
 
 console.log(`Recipe catalog tests passed (${catalog.recipes.length} recipes, ${catalog.sources.length} sources, ${mergedFilms.length} films, ${mergedDevelopers.length} developers).`);
