@@ -1184,6 +1184,11 @@ select:disabled {
   margin-top: 12px;
 }
 
+.support-kofi-button {
+  gap: 8px;
+  text-decoration: none;
+}
+
 .submission-prompt h3 {
   margin: 0;
   color: var(--amber);

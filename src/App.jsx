@@ -1267,6 +1267,16 @@ export default function App() {
                 <button class="contribution-button" type="button" onClick={openSubmitModal}>Review recipe submission</button>
               </div>
             </Show>
+            <div class="submission-prompt support-prompt">
+              <h3>Support darkTimer</h3>
+              <p>darkTimer is free and open-source. If it helped you develop this roll, consider donating on Ko-fi to help maintain this website.</p>
+              <a class="contribution-button support-kofi-button" href="https://ko-fi.com/mikey_247" target="_blank" rel="noreferrer">
+                <svg class="github-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M18 8h1a3 3 0 0 1 0 6h-1v1a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V8a1 1 0 0 1 1-1h15v1Zm0 4h1a1 1 0 0 0 0-2h-1v2Zm-7.5 3.6c1.66-1.16 2.8-2.2 2.8-3.38a1.72 1.72 0 0 0-1.7-1.72c-.6 0-1.1.3-1.4.76-.3-.46-.8-.76-1.4-.76a1.72 1.72 0 0 0-1.7 1.72c0 1.18 1.14 2.22 2.8 3.38l.3.2.3-.2Z" />
+                </svg>
+                <span>Donate on Ko-fi</span>
+              </a>
+            </div>
             <button class="primary-button primary-button-inline" type="button" onClick={resetProcess}>
               {isCustomRecipe() ? "No, develop another roll" : "Develop another roll"}
             </button>
