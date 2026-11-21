@@ -1050,34 +1050,62 @@ select:disabled {
   gap: 20px;
 }
 
-.step-ribbon {
+.vfd-stage-console {
+  width: min(100%, 680px);
+}
+
+.vfd-stage-tabs {
+  list-style: none;
+  margin: 0;
+  padding: 0 2px;
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
+  gap: 4px;
 }
 
-.step-pill {
-  padding: 6px 10px;
-  border: 1px solid #353732;
-  background: #151613;
-  color: var(--muted);
+.vfd-stage-tab {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 7px 6px 6px;
+  border: 1px solid #30322d;
+  border-bottom: 0;
+  border-radius: 3px 3px 0 0;
+  background: #121310;
+  color: #777872;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.76rem;
-  letter-spacing: 0.06em;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+  position: relative;
 }
 
-.step-pill.is-done {
-  border-color: #4d6b47;
+.vfd-stage-tab.is-done {
+  border-color: #3f5c3a;
   color: #8fd182;
+  background: #101610;
 }
 
-.step-pill.is-active {
-  border-color: var(--amber);
-  color: var(--display);
-  background: var(--amber);
-  font-weight: 800;
+.vfd-stage-tab.is-active {
+  border: 2px solid #353732;
+  border-top: 3px solid var(--amber);
+  border-bottom: 0;
+  background: var(--display);
+  color: var(--amber);
+  font-weight: 900;
+  z-index: 2;
+  margin-bottom: -2px;
+  padding-bottom: 8px;
+  text-shadow: 0 0 8px rgb(255 176 0 / 40%);
+}
+
+.vfd-tab-check {
+  font-size: 0.72rem;
+  line-height: 1;
 }
 
 .timer-display {
@@ -1112,16 +1140,18 @@ select:disabled {
 }
 
 .vfd-progress-panel {
-  width: min(100%, 680px);
-  padding: 12px 16px;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: 12px 16px 14px;
   border: 2px solid #353732;
-  border-radius: 3px;
+  border-radius: 0 0 3px 3px;
   background:
     repeating-linear-gradient(0deg, rgb(57 255 136 / 2.5%) 0 1px, transparent 1px 4px),
     var(--display);
   box-shadow: inset 0 3px 10px #000, 0 2px 0 #555751;
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .vfd-progress-meta,
@@ -1768,13 +1798,34 @@ footer {
     gap: 12px;
   }
 
-  .step-ribbon {
+  .vfd-stage-tabs {
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 0;
+    margin-bottom: 6px;
     gap: 5px;
   }
 
-  .step-pill {
-    padding: 4px 7px;
-    font-size: 0.68rem;
+  .vfd-stage-tab {
+    flex: 0 1 auto;
+    padding: 5px 8px;
+    border-bottom: 1px solid #30322d;
+    border-radius: 2px;
+    font-size: 0.66rem;
+  }
+
+  .vfd-stage-tab.is-done {
+    border-bottom-color: #3f5c3a;
+  }
+
+  .vfd-stage-tab.is-active {
+    margin-bottom: 0;
+    padding-bottom: 5px;
+    border-bottom: 2px solid var(--amber);
+  }
+
+  .vfd-progress-panel {
+    border-radius: 3px;
   }
 
   .timer-display {

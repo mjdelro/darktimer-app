@@ -1195,20 +1195,61 @@ export default function App() {
 
         <Show when={screen() === "timer" && currentStep()}>
           <section class="timer-screen">
-            <div class="step-ribbon">
-              <For each={activeSteps()}>
-                {(step, i) => (
-                  <span
-                    class="step-pill"
-                    classList={{
-                      "is-done": i() < stepIndex(),
-                      "is-active": i() === stepIndex()
-                    }}
-                  >
-                    {step.name}
-                  </span>
-                )}
-              </For>
+            <div class="vfd-stage-console" aria-label="Process stage and step progress">
+              <ol class="vfd-stage-tabs" aria-label="Development stages">
+                <For each={activeSteps()}>
+                  {(step, i) => (
+                    <li
+                      class="vfd-stage-tab"
+                      classList={{
+                        "is-done": i() < stepIndex(),
+                        "is-active": i() === stepIndex()
+                      }}
+                      aria-current={i() === stepIndex() ? "step" : undefined}
+                    >
+                      <Show when={i() < stepIndex()}>
+                        <span class="vfd-tab-check" aria-hidden="true">✓</span>
+                      </Show>
+                      <span>{step.name}</span>
+                    </li>
+                  )}
+                </For>
+              </ol>
+
+              <div class="vfd-progress-panel">
+                <div class="vfd-progress-meta">
+                  <span>Step {stepIndex() + 1} of {activeSteps().length} · {currentStep().name}</span>
+                  <span class="vfd-progress-digits">{formatTime(elapsedSeconds())} / {formatTime(currentStep().seconds)}</span>
+                </div>
+                <div
+                  class="vfd-progress-track"
+                  role="progressbar"
+                  aria-label={`${currentStep().name} progress`}
+                  aria-valuemin="0"
+                  aria-valuemax={currentStep().seconds}
+                  aria-valuenow={Math.min(elapsedSeconds(), currentStep().seconds)}
+                >
+                  <div class="vfd-progress-fill" style={{ width: `${stepProgressPct()}%` }} />
+                  <div class="vfd-progress-pips" aria-hidden="true">
+                    <For each={agitationMarkers()}>
+                      {(marker) => (
+                        <span
+                          class="vfd-pip"
+                          classList={{
+                            "is-passed": !waitingForPour() && elapsedSeconds() >= marker.atSeconds
+                          }}
+                          style={{ left: `${marker.pct}%` }}
+                          title={`Agitate at ${formatTime(marker.atSeconds)}`}
+                        />
+                      )}
+                    </For>
+                  </div>
+                </div>
+                <div class="vfd-progress-legend">
+                  <span><span class="vfd-pip-swatch" aria-hidden="true" /> Agitate point</span>
+                  <span>{Math.round(stepProgressPct())}%</span>
+                </div>
+              </div>
             </div>
 
             <div class="timer-display" role="timer">
@@ -1228,40 +1269,6 @@ export default function App() {
                 width="720"
                 height="720"
               />
-            </div>
-
-            <div class="vfd-progress-panel" aria-label="Step progress">
-              <div class="vfd-progress-meta">
-                <span>{currentStep().name} progress</span>
-                <span class="vfd-progress-digits">{formatTime(elapsedSeconds())} / {formatTime(currentStep().seconds)}</span>
-              </div>
-              <div
-                class="vfd-progress-track"
-                role="progressbar"
-                aria-valuemin="0"
-                aria-valuemax={currentStep().seconds}
-                aria-valuenow={Math.min(elapsedSeconds(), currentStep().seconds)}
-              >
-                <div class="vfd-progress-fill" style={{ width: `${stepProgressPct()}%` }} />
-                <div class="vfd-progress-pips" aria-hidden="true">
-                  <For each={agitationMarkers()}>
-                    {(marker) => (
-                      <span
-                        class="vfd-pip"
-                        classList={{
-                          "is-passed": !waitingForPour() && elapsedSeconds() >= marker.atSeconds
-                        }}
-                        style={{ left: `${marker.pct}%` }}
-                        title={`Agitate at ${formatTime(marker.atSeconds)}`}
-                      />
-                    )}
-                  </For>
-                </div>
-              </div>
-              <div class="vfd-progress-legend">
-                <span><span class="vfd-pip-swatch" aria-hidden="true" /> Agitate point</span>
-                <span>{Math.round(stepProgressPct())}%</span>
-              </div>
             </div>
 
             <div class="instruction-panel">
