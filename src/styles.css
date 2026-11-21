@@ -939,13 +939,15 @@ input[type="number"]:hover,
 }
 
 .vcr-switch-temp.is-on,
-.vcr-switch-mode.is-on {
+.vcr-switch-mode.is-on,
+.vcr-switch-orientation.is-on {
   background:
     repeating-linear-gradient(0deg, rgb(255 255 255 / 4%) 0 1px, transparent 1px 3px),
     linear-gradient(180deg, #1f7399 0%, #134a63 100%);
 }
 
-.vcr-switch-process {
+.vcr-switch-process,
+.vcr-switch-orientation {
   background:
     repeating-linear-gradient(0deg, rgb(255 255 255 / 4%) 0 1px, transparent 1px 3px),
     linear-gradient(180deg, #4b4d47 0%, #272824 100%);
@@ -1070,6 +1072,210 @@ select:disabled {
   display: grid;
   justify-items: center;
   gap: 20px;
+}
+
+.timer-console-grid,
+.timer-center-col {
+  display: contents;
+}
+
+.timer-screen:not(.is-landscape) .vfd-stage-console { order: 1; }
+.timer-screen:not(.is-landscape) .timer-display { order: 2; }
+.timer-screen:not(.is-landscape) .tank-stage { order: 3; }
+.timer-screen:not(.is-landscape) .instruction-panel { order: 4; }
+.timer-screen:not(.is-landscape) .vcr-deck { order: 5; }
+
+/* Landscape 3-zone rack-mount console (Option 3) */
+.timer-screen.is-landscape {
+  padding: clamp(10px, 2vw, 24px) clamp(12px, 2.2vw, 24px);
+  gap: 12px;
+  align-content: start;
+}
+
+.timer-screen.is-landscape .vfd-stage-console {
+  width: min(100%, 1020px);
+}
+
+.timer-screen.is-landscape .timer-console-grid {
+  display: grid;
+  grid-template-columns: clamp(140px, 20vw, 210px) minmax(0, 1fr) clamp(176px, 23vw, 236px);
+  gap: 12px;
+  width: min(100%, 1020px);
+  align-items: stretch;
+}
+
+.timer-screen.is-landscape .tank-stage {
+  order: 1;
+  width: 100%;
+  aspect-ratio: auto;
+  min-height: 170px;
+  border-width: 6px;
+}
+
+.timer-screen.is-landscape .tank-stage img {
+  width: 62%;
+}
+
+.timer-screen.is-landscape .tank-stage.is-pouring img {
+  width: 74%;
+}
+
+.timer-screen.is-landscape .timer-center-col {
+  order: 2;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 10px;
+  min-width: 0;
+}
+
+.timer-screen.is-landscape .timer-display {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: clamp(3rem, 8.5vw, 5.4rem);
+  display: grid;
+  place-items: center;
+}
+
+.timer-screen.is-landscape .instruction-panel {
+  width: 100%;
+  padding: 10px 14px;
+}
+
+.timer-screen.is-landscape .instruction-kicker {
+  font-size: 0.72rem;
+}
+
+.timer-screen.is-landscape .instruction-panel h1 {
+  margin: 4px 0 3px;
+  font-size: 1.08rem;
+  color: var(--amber);
+}
+
+.timer-screen.is-landscape .instruction-panel p {
+  font-size: 0.82rem;
+}
+
+.timer-screen.is-landscape .vcr-deck {
+  order: 3;
+  width: 100%;
+  padding: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: 1.35fr 1fr;
+  gap: 8px;
+}
+
+.timer-screen.is-landscape .vcr-key {
+  min-height: 52px;
+}
+
+.timer-screen.is-landscape .vcr-key-play {
+  grid-column: 1 / -1;
+}
+
+@media (max-height: 520px) {
+  .app-shell.is-timer-landscape .site-header {
+    min-height: 46px;
+    padding: 4px 14px;
+  }
+
+  .app-shell.is-timer-landscape .wordmark-button {
+    min-height: 36px;
+    gap: 8px;
+  }
+
+  .app-shell.is-timer-landscape .brand-icon {
+    width: 26px;
+    height: 26px;
+  }
+
+  .app-shell.is-timer-landscape .brand-wordmark {
+    height: 18px;
+  }
+
+  .app-shell.is-timer-landscape .vcr-switch {
+    height: 34px;
+    width: 92px;
+    padding: 0 2px 0 34px;
+  }
+
+  .app-shell.is-timer-landscape .vcr-switch.is-on {
+    padding: 0 34px 0 2px;
+  }
+
+  .app-shell.is-timer-landscape .vcr-switch-thumb {
+    width: 30px;
+    height: 26px;
+  }
+
+  .app-shell.is-timer-landscape .vcr-switch.is-on .vcr-switch-thumb {
+    transform: translateX(54px);
+  }
+
+  .timer-screen.is-landscape {
+    padding: 8px 14px 10px;
+    gap: 8px;
+  }
+
+  .timer-screen.is-landscape .vfd-stage-tab {
+    padding: 4px 5px;
+    font-size: 0.62rem;
+  }
+
+  .timer-screen.is-landscape .vfd-stage-tab.is-active {
+    padding-bottom: 6px;
+  }
+
+  .timer-screen.is-landscape .vfd-progress-panel {
+    padding: 6px 12px 7px;
+    gap: 5px;
+  }
+
+  .timer-screen.is-landscape .vfd-progress-track {
+    height: 13px;
+  }
+
+  .timer-screen.is-landscape .vfd-pip {
+    top: -3px;
+    height: 17px;
+  }
+
+  .timer-screen.is-landscape .vfd-progress-legend {
+    display: none;
+  }
+
+  .timer-screen.is-landscape .tank-stage {
+    min-height: 148px;
+  }
+
+  .timer-screen.is-landscape .timer-display {
+    padding: 8px 12px;
+    font-size: clamp(2.8rem, 8.2vw, 4.6rem);
+  }
+
+  .timer-screen.is-landscape .instruction-panel {
+    padding: 7px 10px;
+  }
+
+  .timer-screen.is-landscape .instruction-kicker {
+    display: none;
+  }
+
+  .timer-screen.is-landscape .instruction-panel h1 {
+    margin: 0 0 2px;
+    font-size: 0.96rem;
+  }
+
+  .timer-screen.is-landscape .instruction-panel p {
+    font-size: 0.74rem;
+  }
+
+  .timer-screen.is-landscape .up-next {
+    margin-top: 3px;
+  }
+
+  .timer-screen.is-landscape .vcr-key {
+    min-height: 44px;
+  }
 }
 
 .vfd-stage-console {
@@ -1857,6 +2063,36 @@ footer {
 
   .vfd-progress-panel {
     border-radius: 3px;
+  }
+
+  .timer-screen.is-landscape .timer-console-grid {
+    grid-template-columns: 84px minmax(0, 1fr) 112px;
+    gap: 6px;
+  }
+
+  .timer-screen.is-landscape .tank-stage {
+    min-height: 120px;
+    border-width: 4px;
+  }
+
+  .timer-screen.is-landscape .timer-display {
+    padding: 8px 6px;
+    font-size: clamp(1.7rem, 7.5vw, 2.6rem);
+  }
+
+  .timer-screen.is-landscape .vcr-deck {
+    padding: 5px;
+    gap: 4px;
+  }
+
+  .timer-screen.is-landscape .vcr-key {
+    min-height: 44px;
+    padding: 4px 2px;
+  }
+
+  .timer-screen.is-landscape .vcr-icon {
+    width: 18px;
+    height: 18px;
   }
 
   .timer-display {

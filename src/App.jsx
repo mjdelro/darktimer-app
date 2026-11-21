@@ -76,8 +76,14 @@ function DurationInput(props) {
 }
 
 export default function App() {
+  const landscapeQuery = typeof window !== "undefined" && window.matchMedia
+    ? window.matchMedia("(orientation: landscape) and (max-height: 560px)")
+    : null;
   const [screen, setScreen] = createSignal("setup"); // setup | timer | complete
   const [processType, setProcessType] = createSignal("bw"); // bw | c41
+  const [timerOrientation, setTimerOrientation] = createSignal(
+    landscapeQuery?.matches ? "landscape" : "portrait"
+  ); // portrait | landscape
   const [tempUnit, setTempUnit] = createSignal("fahrenheit");
   const [soundEnabled, setSoundEnabled] = createSignal(true);
   const [showSubmitModal, setShowSubmitModal] = createSignal(false);
@@ -207,6 +213,14 @@ export default function App() {
       releaseWakeLock();
     }
   });
+
+  if (landscapeQuery) {
+    const handleOrientationChange = (event) => {
+      setTimerOrientation(event.matches ? "landscape" : "portrait");
+    };
+    landscapeQuery.addEventListener("change", handleOrientationChange);
+    onCleanup(() => landscapeQuery.removeEventListener("change", handleOrientationChange));
+  }
 
   onCleanup(() => {
     if (timerId !== null) window.clearInterval(timerId);
@@ -729,7 +743,11 @@ export default function App() {
 
   return (
     <>
-    <div class="app-shell" inert={isAnyModalOpen() || undefined}>
+    <div
+      class="app-shell"
+      classList={{ "is-timer-landscape": screen() === "timer" && timerOrientation() === "landscape" }}
+      inert={isAnyModalOpen() || undefined}
+    >
       <header class="site-header">
         <div class="header-brand">
           <a class="wordmark-button" href="https://darktimer.app/" aria-label="darkTimer">
@@ -741,27 +759,50 @@ export default function App() {
           <span class="version-badge" aria-label={`Version ${APP_VERSION}`}>v{APP_VERSION}</span>
         </div>
         <div class="header-actions">
-          <div class="process-toggle">
-            <span class="process-toggle-label" aria-hidden="true">PROCESS</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={processType() === "c41"}
-              aria-label="Use C-41 color process"
-              class="vcr-switch vcr-switch-process"
-              classList={{ "is-on": processType() === "c41" }}
-              onClick={() => {
-                const next = processType() === "bw" ? "c41" : "bw";
-                setProcessType(next);
-                if (next === "c41" && screen() !== "setup") resetProcess();
-              }}
-            >
-              <span class="vcr-switch-label" aria-hidden="true">
-                {processType() === "c41" ? "C41" : "B/W"}
-              </span>
-              <span class="vcr-switch-thumb" aria-hidden="true" />
-            </button>
-          </div>
+          <Show
+            when={screen() === "setup"}
+            fallback={
+              <div class="process-toggle">
+                <span class="process-toggle-label" aria-hidden="true">ORIENTATION</span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={timerOrientation() === "landscape"}
+                  aria-label="Use landscape timer layout"
+                  class="vcr-switch vcr-switch-orientation"
+                  classList={{ "is-on": timerOrientation() === "landscape" }}
+                  onClick={() => setTimerOrientation(timerOrientation() === "landscape" ? "portrait" : "landscape")}
+                >
+                  <span class="vcr-switch-label" aria-hidden="true">
+                    {timerOrientation() === "landscape" ? "LAND" : "PORT"}
+                  </span>
+                  <span class="vcr-switch-thumb" aria-hidden="true" />
+                </button>
+              </div>
+            }
+          >
+            <div class="process-toggle">
+              <span class="process-toggle-label" aria-hidden="true">PROCESS</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={processType() === "c41"}
+                aria-label="Use C-41 color process"
+                class="vcr-switch vcr-switch-process"
+                classList={{ "is-on": processType() === "c41" }}
+                onClick={() => {
+                  const next = processType() === "bw" ? "c41" : "bw";
+                  setProcessType(next);
+                  if (next === "c41" && screen() !== "setup") resetProcess();
+                }}
+              >
+                <span class="vcr-switch-label" aria-hidden="true">
+                  {processType() === "c41" ? "C41" : "B/W"}
+                </span>
+                <span class="vcr-switch-thumb" aria-hidden="true" />
+              </button>
+            </div>
+          </Show>
         </div>
       </header>
 
@@ -1198,7 +1239,7 @@ export default function App() {
         </Show>
 
         <Show when={screen() === "timer" && currentStep()}>
-          <section class="timer-screen">
+          <section class="timer-screen" classList={{ "is-landscape": timerOrientation() === "landscape" }}>
             <div class="vfd-stage-console" aria-label="Process stage and step progress">
               <ol class="vfd-stage-tabs" aria-label="Development stages">
                 <For each={activeSteps()}>
@@ -1256,37 +1297,40 @@ export default function App() {
               </div>
             </div>
 
-            <div class="timer-display" role="timer">
-              {formatTime(remainingSeconds())}
-            </div>
+            <div class="timer-console-grid">
+              <div class="timer-center-col">
+                <div class="timer-display" role="timer">
+                  {formatTime(remainingSeconds())}
+                </div>
 
-            <div
-              class="tank-stage"
-              classList={{
-                "is-agitating": !waitingForPour() && !isPaused() && currentInstruction().phase !== "rest",
-                "is-pouring": waitingForPour()
-              }}
-            >
-              <img
-                src={waitingForPour() ? "./assets/images/canister-vfd-pour.svg" : "./assets/images/canister-vfd.svg"}
-                alt={waitingForPour() ? "Pouring developing tank" : "Developing tank"}
-                width="720"
-                height="720"
-              />
-            </div>
+                <div class="instruction-panel">
+                  <p class="instruction-kicker">
+                    Step {stepIndex() + 1} of {activeSteps().length} · {currentStep().name} : {currentInstruction().kicker}
+                  </p>
+                  <h1 ref={timerHeadingRef} tabIndex="-1">{currentInstruction().title}</h1>
+                  <p>{currentInstruction().detail}</p>
+                  <Show when={nextStep()}>
+                    {(next) => <p class="up-next">Up next: <strong>{next().name}</strong> ({formatTime(next().seconds)})</p>}
+                  </Show>
+                </div>
+              </div>
 
-            <div class="instruction-panel">
-              <p class="instruction-kicker">
-                Step {stepIndex() + 1} of {activeSteps().length} · {currentStep().name} : {currentInstruction().kicker}
-              </p>
-              <h1 ref={timerHeadingRef} tabIndex="-1">{currentInstruction().title}</h1>
-              <p>{currentInstruction().detail}</p>
-              <Show when={nextStep()}>
-                {(next) => <p class="up-next">Up next: <strong>{next().name}</strong> ({formatTime(next().seconds)})</p>}
-              </Show>
-            </div>
+              <div
+                class="tank-stage"
+                classList={{
+                  "is-agitating": !waitingForPour() && !isPaused() && currentInstruction().phase !== "rest",
+                  "is-pouring": waitingForPour()
+                }}
+              >
+                <img
+                  src={waitingForPour() ? "./assets/images/canister-vfd-pour.svg" : "./assets/images/canister-vfd.svg"}
+                  alt={waitingForPour() ? "Pouring developing tank" : "Developing tank"}
+                  width="720"
+                  height="720"
+                />
+              </div>
 
-            <div class="vcr-deck" role="group" aria-label="Process transport controls">
+              <div class="vcr-deck" role="group" aria-label="Process transport controls">
               <button
                 class="vcr-key vcr-key-play"
                 type="button"
@@ -1354,6 +1398,7 @@ export default function App() {
                   <path d="M12 5 4 15h16L12 5Zm-8 12v2h16v-2H4Z" />
                 </svg>
               </button>
+              </div>
             </div>
           </section>
         </Show>
