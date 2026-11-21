@@ -1302,7 +1302,11 @@ export default function App() {
 
       <footer>
         <div class="footer-notes">
-          <p class="privacy-note">Recipe selections stay in your browser and are not sent to a darkTimer data server. The static hosting provider may still receive normal web requests.</p>
+          <p class="privacy-note">
+            <button class="footer-policy-button" type="button" onClick={() => setActiveHint("privacy")}>
+              Privacy Policy
+            </button>
+          </p>
           <p class="disclaimer-note">Times are starting points, not guarantees. The manufacturer label and safety data sheet control. darkTimer is independent and is not affiliated with or endorsed by the named manufacturers.</p>
         </div>
         <div class="footer-links">

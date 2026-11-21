@@ -1563,6 +1563,24 @@ footer {
   line-height: 1.4;
 }
 
+.footer-policy-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--paper);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline dotted var(--muted);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.footer-policy-button:hover,
+.footer-policy-button:focus-visible {
+  color: var(--amber);
+  text-decoration-color: var(--amber);
+}
+
 .footer-links {
   display: flex;
   align-items: center;

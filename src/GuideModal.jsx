@@ -8,7 +8,8 @@ const GUIDE_TITLES = {
   agitation: "Agitation methods",
   stop: "Stop bath",
   fixer: "Fixer & clearing time",
-  hypo: "Hypo-clear / wash aid"
+  hypo: "Hypo-clear / wash aid",
+  privacy: "Privacy policy"
 };
 
 export default function GuideModal(props) {
@@ -146,6 +147,19 @@ export default function GuideModal(props) {
               <p class="crt-examples-label">Official references</p>
               <p><a href="https://business.kodakmoments.com/sites/default/files/wysiwyg/pro/chemistry/e103cf.pdf" target="_blank" rel="noreferrer">Kodak Hypo Clearing Agent Reference (E-103CF)</a></p>
               <p><a href="https://www.ilfordphoto.com/washaid/" target="_blank" rel="noreferrer">Ilford Washaid Product &amp; Technical Information</a></p>
+            </div>
+          </Show>
+
+          <Show when={props.activeHint === "privacy"}>
+            <p>Recipe selections stay in your browser and are not sent to a darkTimer data server. The static hosting provider may still receive normal web requests.</p>
+            <ul class="crt-list">
+              <li><strong>Client-side only</strong> : darkTimer does not set cookies, run analytics, create user accounts, or track your darkroom sessions.</li>
+              <li><strong>Static hosting</strong> : The hosting provider may process standard request metadata (IP address, user agent, requested path, and timestamp) under its own terms and retention practices.</li>
+              <li><strong>External links &amp; submissions</strong> : Opening external manufacturer links, Ko-fi, or submitting a draft recipe issue on GitHub sends a normal web request to that third party under their privacy policy.</li>
+            </ul>
+            <div class="crt-examples">
+              <p class="crt-examples-label">Full statement</p>
+              <p><a href="https://github.com/mjdelro/darktimer-app/blob/main/PRIVACY.md" target="_blank" rel="noreferrer">View PRIVACY.md on GitHub</a></p>
             </div>
           </Show>
         </div>
