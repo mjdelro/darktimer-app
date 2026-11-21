@@ -1184,6 +1184,11 @@ select:disabled {
   margin-top: 12px;
 }
 
+.submission-prompt .contribution-button {
+  display: flex;
+  margin-inline: auto;
+}
+
 .support-kofi-button {
   gap: 8px;
   text-decoration: none;
