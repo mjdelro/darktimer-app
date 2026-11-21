@@ -76,6 +76,7 @@ function DurationInput(props) {
 
 export default function App() {
   const [screen, setScreen] = createSignal("setup"); // setup | timer | complete
+  const [processType, setProcessType] = createSignal("bw"); // bw | c41
   const [tempUnit, setTempUnit] = createSignal("fahrenheit");
   const [soundEnabled, setSoundEnabled] = createSignal(true);
   const [showSubmitModal, setShowSubmitModal] = createSignal(false);
@@ -686,7 +687,27 @@ export default function App() {
           </span>
         </a>
         <div class="header-actions">
-          <span class="version-badge" aria-label="Application version">v1.0.0</span>
+          <div class="process-toggle">
+            <span class="process-toggle-label" aria-hidden="true">PROCESS</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={processType() === "c41"}
+              aria-label={`Film process: ${processType() === "c41" ? "C41 color" : "Black and white"}`}
+              class="vcr-switch vcr-switch-process"
+              classList={{ "is-on": processType() === "c41" }}
+              onClick={() => {
+                const next = processType() === "bw" ? "c41" : "bw";
+                setProcessType(next);
+                if (next === "c41" && screen() !== "setup") resetProcess();
+              }}
+            >
+              <span class="vcr-switch-label" aria-hidden="true">
+                {processType() === "c41" ? "C41" : "B/W"}
+              </span>
+              <span class="vcr-switch-thumb" aria-hidden="true" />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -742,7 +763,17 @@ export default function App() {
               </ol>
             </div>
 
-            <form class="process-panel" onSubmit={startProcess}>
+            <form
+              class="process-panel"
+              classList={{ "is-under-construction": processType() === "c41" }}
+              onSubmit={(e) => {
+                if (processType() === "c41") {
+                  e.preventDefault();
+                  return;
+                }
+                startProcess(e);
+              }}
+            >
               {/* 01 Presoak */}
               <div class="stage-card">
                 <div class="stage-row stage-row-presoak">
@@ -1088,9 +1119,16 @@ export default function App() {
               </div>
 
               <Show when={customTimeError()}><p class="custom-time-summary" role="alert">{customTimeError()}</p></Show>
-              <button class="primary-button" type="submit" disabled={!canStart()}>
+              <button class="primary-button" type="submit" disabled={!canStart() || processType() === "c41"}>
                 Start Development Process
               </button>
+              <Show when={processType() === "c41"}>
+                <div class="c41-tape-overlay" role="status" aria-live="polite">
+                  <div class="c41-tape-strip">
+                    <span>UNDER CONSTRUCTION &nbsp;·&nbsp; UNDER CONSTRUCTION &nbsp;·&nbsp; UNDER CONSTRUCTION</span>
+                  </div>
+                </div>
+              </Show>
             </form>
           </section>
         </Show>

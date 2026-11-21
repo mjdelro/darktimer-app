@@ -110,17 +110,18 @@ footer {
   gap: 12px;
 }
 
-.version-badge {
-  padding: 5px 10px;
-  border: 1px solid #454741;
-  border-radius: var(--radius-small);
-  background: var(--display);
-  box-shadow: inset 0 2px 5px #000;
-  color: var(--amber);
+.process-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.process-toggle-label {
+  color: var(--muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
 }
 
 .temperature-toggle {
@@ -346,6 +347,7 @@ footer {
 
 .process-panel {
   position: relative;
+  overflow: hidden;
   padding: 26px clamp(16px, 2.2vw, 26px) 24px;
   border: 2px solid #454741;
   border-bottom-color: #262521;
@@ -353,6 +355,43 @@ footer {
     repeating-linear-gradient(0deg, rgb(255 255 255 / 2%) 0 1px, transparent 1px 3px),
     linear-gradient(135deg, #262724 0%, #191a17 52%, #0f100e 100%);
   box-shadow: 0 14px 28px rgb(0 0 0 / 52%), inset 0 2px 0 #454741, inset 0 -3px 0 #080906;
+}
+
+.process-panel.is-under-construction > :not(.c41-tape-overlay) {
+  filter: grayscale(0.4) brightness(0.45);
+  pointer-events: none;
+  user-select: none;
+}
+
+.c41-tape-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: rgb(5 6 4 / 38%);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.c41-tape-strip {
+  width: 150%;
+  padding: 14px 0;
+  transform: rotate(-18deg);
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  background:
+    linear-gradient(#f5c400, #e5b300) padding-box,
+    repeating-linear-gradient(-45deg, #11120f 0 14px, #f5c400 14px 28px) border-box;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 78%), inset 0 1px 0 rgb(255 255 255 / 45%);
+  color: #11120f;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: clamp(1rem, 2.2vw, 1.35rem);
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: center;
+  white-space: nowrap;
+  text-shadow: 0 1px 0 rgb(255 255 255 / 35%);
 }
 
 .process-panel::before,
@@ -879,6 +918,18 @@ input[type="number"]:hover,
   background:
     repeating-linear-gradient(0deg, rgb(255 255 255 / 4%) 0 1px, transparent 1px 3px),
     linear-gradient(180deg, #1f7399 0%, #134a63 100%);
+}
+
+.vcr-switch-process {
+  background:
+    repeating-linear-gradient(0deg, rgb(255 255 255 / 4%) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, #4b4d47 0%, #272824 100%);
+}
+
+.vcr-switch-process.is-on {
+  background:
+    repeating-linear-gradient(0deg, rgb(255 255 255 / 4%) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, #d97706 0%, #92400e 100%);
 }
 
 .presoak-duration {
