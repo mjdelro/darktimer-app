@@ -177,11 +177,19 @@ export default function SearchCombobox(props) {
       return;
     }
 
+    if (event.key === "Tab") {
+      if (isOpen()) {
+        commitAndClose();
+      }
+      return;
+    }
+
     if (event.key === "Escape") {
       if (isOpen()) {
         event.preventDefault();
         setIsOpen(false);
         setQuery(props.selectedLabel || "");
+        inputRef?.focus();
       }
     }
   }
@@ -235,6 +243,14 @@ export default function SearchCombobox(props) {
       classList={{ "is-open": isOpen(), "is-disabled": Boolean(props.disabled) }}
       ref={containerRef}
       onFocusOut={handleFocusOut}
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && isOpen()) {
+          event.preventDefault();
+          setIsOpen(false);
+          setQuery(props.selectedLabel || "");
+          inputRef?.focus();
+        }
+      }}
     >
       <div class="combobox-input-wrap">
         <input
@@ -307,6 +323,7 @@ export default function SearchCombobox(props) {
           id={listboxId}
           class="combobox-listbox"
           role="listbox"
+          tabIndex="-1"
           aria-label={props.listboxLabel || props.placeholder}
         >
           <Show

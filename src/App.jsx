@@ -81,7 +81,26 @@ export default function App() {
   const [soundEnabled, setSoundEnabled] = createSignal(true);
   const [showSubmitModal, setShowSubmitModal] = createSignal(false);
   const [activeHint, setActiveHint] = createSignal(null); // "dilution" | "tank" | "agitation" | "stop" | "fixer" | "hypo" | null
+  const [announcement, setAnnouncement] = createSignal("");
   let submitReturnTarget;
+  let timerHeadingRef;
+  let completeHeadingRef;
+  let startButtonRef;
+  let lastAnnouncedPhase = "";
+
+  function speakDuration(totalSeconds) {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    const parts = [];
+    if (mins > 0) parts.push(`${mins} ${mins === 1 ? "minute" : "minutes"}`);
+    if (secs > 0 || parts.length === 0) parts.push(`${secs} ${secs === 1 ? "second" : "seconds"}`);
+    return parts.join(" ");
+  }
+
+  function announce(message) {
+    setAnnouncement("");
+    queueMicrotask(() => setAnnouncement(message));
+  }
 
   // Catalog state (pre-populated with curated B&W film and developer pickers)
   const [catalogMode, setCatalogMode] = createSignal("loading");
@@ -592,6 +611,12 @@ export default function App() {
     lastTickBoundary = 0;
     lastRenderedElapsed = 0;
 
+    const initialStep = currentStep();
+    if (initialStep) {
+      lastAnnouncedPhase = instructionFor(0, initialStep.agitation).phase;
+      announce(`${initialStep.name} started, ${speakDuration(initialStep.seconds)}.`);
+    }
+
     timerId = window.setInterval(() => {
       if (isPaused()) return;
       const step = currentStep();
@@ -600,6 +625,13 @@ export default function App() {
       if (elapsed === lastRenderedElapsed) return;
       lastRenderedElapsed = elapsed;
       setElapsedSeconds(elapsed);
+
+      const phase = instructionFor(elapsed, step.agitation).phase;
+      if (elapsed < step.seconds && phase !== lastAnnouncedPhase) {
+        lastAnnouncedPhase = phase;
+        if (phase === "agitate") announce("Agitate now.");
+        else if (phase === "rest") announce("Rest period.");
+      }
 
       const boundary = Math.floor(elapsed / 10) * 10;
       if (boundary >= 10 && boundary > lastTickBoundary && elapsed < step.seconds) {
@@ -616,11 +648,17 @@ export default function App() {
         stopTicker();
         if (soundEnabled()) playStepComplete();
         if (stepIndex() + 1 < activeSteps().length) {
+          const completedName = step.name;
+          const next = activeSteps()[stepIndex() + 1];
           setStepIndex(stepIndex() + 1);
           setElapsedSeconds(0);
           setWaitingForPour(true);
+          announce(`${completedName} complete. Pour in ${next.name}.`);
+          queueMicrotask(() => timerHeadingRef?.focus());
         } else {
           setScreen("complete");
+          announce("Development process finished.");
+          queueMicrotask(() => completeHeadingRef?.focus());
         }
       }
     }, 250);
@@ -635,6 +673,7 @@ export default function App() {
     setScreen("timer");
     window.scrollTo(0, 0);
     runCurrentStepClock();
+    queueMicrotask(() => timerHeadingRef?.focus());
   }
 
   function togglePause() {
@@ -642,20 +681,27 @@ export default function App() {
     if (isPaused()) {
       pausedTotal += Date.now() - pausedAt;
       setIsPaused(false);
+      announce("Process resumed.");
     } else {
       pausedAt = Date.now();
       setIsPaused(true);
+      announce("Process paused.");
     }
   }
 
   function skipToNextStep() {
     stopTicker();
     if (stepIndex() + 1 < activeSteps().length) {
+      const next = activeSteps()[stepIndex() + 1];
       setStepIndex(stepIndex() + 1);
       setElapsedSeconds(0);
       setWaitingForPour(true);
+      announce(`Skipped to ${next.name}. Pour in ${next.name}.`);
+      queueMicrotask(() => timerHeadingRef?.focus());
     } else {
       setScreen("complete");
+      announce("Development process finished.");
+      queueMicrotask(() => completeHeadingRef?.focus());
     }
   }
 
@@ -675,10 +721,14 @@ export default function App() {
     setWaitingForPour(false);
     setIsPaused(false);
     setScreen("setup");
+    queueMicrotask(() => startButtonRef?.focus());
   }
 
+  const isAnyModalOpen = createMemo(() => Boolean(activeHint() || (showSubmitModal() && effectiveRecipe())));
+
   return (
-    <div class="app-shell">
+    <>
+    <div class="app-shell" inert={isAnyModalOpen() || undefined}>
       <header class="site-header">
         <a class="wordmark-button" href="https://darktimer.app/" aria-label="darkTimer">
           <img class="brand-icon" src="./assets/images/darktimer-icon.png" alt="" aria-hidden="true" width="512" height="512" />
@@ -693,7 +743,7 @@ export default function App() {
               type="button"
               role="switch"
               aria-checked={processType() === "c41"}
-              aria-label={`Film process: ${processType() === "c41" ? "C41 color" : "Black and white"}`}
+              aria-label="Use C-41 color process"
               class="vcr-switch vcr-switch-process"
               classList={{ "is-on": processType() === "c41" }}
               onClick={() => {
@@ -712,6 +762,9 @@ export default function App() {
       </header>
 
       <main>
+        <p class="sr-only" role="status" aria-live="polite" aria-atomic="true">
+          {announcement()}
+        </p>
         <Show when={screen() === "setup"}>
           <section class="setup-screen">
             <div class="setup-copy">
@@ -775,7 +828,8 @@ export default function App() {
               }}
             >
               {/* 01 Presoak */}
-              <div class="stage-card">
+              <fieldset class="stage-card">
+                <legend class="sr-only">Stage 01: Presoak</legend>
                 <div class="stage-row stage-row-presoak">
                   <div class="stage-label-row">
                     <span class="stage-label"><span class="stage-num">01</span></span>
@@ -786,7 +840,7 @@ export default function App() {
                       type="button"
                       role="switch"
                       aria-checked={presoakEnabled()}
-                      aria-label="Presoak"
+                      aria-label="Enable presoak"
                       class="vcr-switch"
                       classList={{ "is-on": presoakEnabled() }}
                       onClick={() => setPresoakEnabled(!presoakEnabled())}
@@ -801,7 +855,7 @@ export default function App() {
                         type="button"
                         role="switch"
                         aria-checked={presoakMode() === "stand"}
-                        aria-label={`Presoak method: ${presoakMode() === "stand" ? "Stand" : "Agitated"}`}
+                        aria-label="Use stand presoak"
                         class="vcr-switch vcr-switch-mode"
                         classList={{ "is-on": presoakMode() === "stand" }}
                         onClick={() => {
@@ -830,10 +884,11 @@ export default function App() {
                     </Show>
                   </div>
                 </div>
-              </div>
+              </fieldset>
 
               {/* 02 Film */}
-              <div class="stage-card">
+              <fieldset class="stage-card">
+                <legend class="sr-only">Stage 02: Film</legend>
                 <div class="stage-row">
                   <label class="stage-label" for="filmSelect"><span class="stage-num">02</span> Film</label>
                   <SearchCombobox
@@ -853,10 +908,11 @@ export default function App() {
                 <Show when={catalogMode() === "error"}>
                   <p class="catalog-error" role="alert">Could not load the verified recipe catalog. You can still use any film and developer with a Custom Recipe. {catalogError()} <button type="button" onClick={() => window.location.reload()}>Reload</button></p>
                 </Show>
-              </div>
+              </fieldset>
 
               {/* 03 Developer, Recipe Variant, Dilution & Tank */}
-              <div class="stage-card">
+              <fieldset class="stage-card">
+                <legend class="sr-only">Stage 03: Developer</legend>
                 <div class="stage-row">
                   <label class="stage-label" for="devSelect"><span class="stage-num">03</span> Developer</label>
                   <SearchCombobox
@@ -1052,10 +1108,11 @@ export default function App() {
                     </button>
                   </div>
                 </Show>
-              </div>
+              </fieldset>
 
               {/* 04 Stop Bath */}
-              <div class="stage-card">
+              <fieldset class="stage-card">
+                <legend class="sr-only">Stage 04: Stop Bath</legend>
                 <div class="stage-row">
                   <div class="stage-label-row">
                     <label class="stage-label" for="stopSelect"><span class="stage-num">04</span></label>
@@ -1069,10 +1126,11 @@ export default function App() {
                   <DurationInput label="Custom stop bath" seconds={customStopBathSeconds()} onChange={setCustomStopBathSeconds} />
                   <Show when={Number(customStopBathSeconds()) <= 0}><p class="custom-time-error" role="alert">Set a time greater than zero.</p></Show>
                 </Show>
-              </div>
+              </fieldset>
 
               {/* 05 Fixer */}
-              <div class="stage-card">
+              <fieldset class="stage-card">
+                <legend class="sr-only">Stage 05: Fixer</legend>
                 <div class="stage-row">
                   <div class="stage-label-row">
                     <label class="stage-label" for="fixerSelect"><span class="stage-num">05</span></label>
@@ -1086,10 +1144,11 @@ export default function App() {
                   <DurationInput label="Custom fixer" seconds={customFixerSeconds()} onChange={setCustomFixerSeconds} />
                   <Show when={Number(customFixerSeconds()) <= 0}><p class="custom-time-error" role="alert">Set a time greater than zero.</p></Show>
                 </Show>
-              </div>
+              </fieldset>
 
               {/* 06 Hypo-Clear */}
-              <div class="stage-card">
+              <fieldset class="stage-card">
+                <legend class="sr-only">Stage 06: Hypo-Clear</legend>
                 <div class="stage-row">
                   <div class="stage-label-row">
                     <label class="stage-label" for="hypoSelect"><span class="stage-num">06</span></label>
@@ -1099,10 +1158,11 @@ export default function App() {
                     <For each={HYPO_CLEAR_OPTIONS}>{(o) => <option value={o.id}>{o.label}</option>}</For>
                   </select>
                 </div>
-              </div>
+              </fieldset>
 
               {/* 07 Wash + Photo-Flo */}
-              <div class="stage-card">
+              <fieldset class="stage-card">
+                <legend class="sr-only">Stage 07: Wash</legend>
                 <div class="stage-row">
                   <label class="stage-label" for="washSelect"><span class="stage-num">07</span> Wash</label>
                   <select id="washSelect" value={washId()} onChange={(e) => setWashId(e.currentTarget.value)}>
@@ -1116,10 +1176,10 @@ export default function App() {
                   </div>
                   <Show when={Number(customWashSeconds()) <= 0}><p class="custom-time-error" role="alert">Set a wash time greater than zero. Set Photo-Flo to zero to omit that step.</p></Show>
                 </Show>
-              </div>
+              </fieldset>
 
               <Show when={customTimeError()}><p class="custom-time-summary" role="alert">{customTimeError()}</p></Show>
-              <button class="primary-button" type="submit" disabled={!canStart() || processType() === "c41"}>
+              <button ref={startButtonRef} class="primary-button" type="submit" disabled={!canStart() || processType() === "c41"}>
                 Start Development Process
               </button>
               <Show when={processType() === "c41"}>
@@ -1208,7 +1268,7 @@ export default function App() {
               <p class="instruction-kicker">
                 Step {stepIndex() + 1} of {activeSteps().length} · {currentStep().name} : {currentInstruction().kicker}
               </p>
-              <h2>{currentInstruction().title}</h2>
+              <h1 ref={timerHeadingRef} tabIndex="-1">{currentInstruction().title}</h1>
               <p>{currentInstruction().detail}</p>
               <Show when={nextStep()}>
                 {(next) => <p class="up-next">Up next: <strong>{next().name}</strong> ({formatTime(next().seconds)})</p>}
@@ -1295,7 +1355,7 @@ export default function App() {
             </div>
             <div class="instruction-panel">
               <p class="instruction-kicker">All {activeSteps().length} steps complete</p>
-              <h2>Development process finished.</h2>
+              <h1 ref={completeHeadingRef} tabIndex="-1">Development process finished.</h1>
               <p>Remove your film from the Photo-Flo bath and hang to dry in a dust-free spot.</p>
             </div>
             <Show when={isCustomRecipe()}>
@@ -1322,22 +1382,6 @@ export default function App() {
         </Show>
       </main>
 
-      <Suspense>
-        <Show when={activeHint()}>
-          <GuideModal activeHint={activeHint()} onClose={() => setActiveHint(null)} />
-        </Show>
-
-        <Show when={showSubmitModal() && effectiveRecipe()}>
-          <SubmitModal
-            recipe={effectiveRecipe()}
-            timeDisplay={formatTime(totalDevSeconds())}
-            tempDisplay={customTemperatureValue()}
-            tempUnit={tempUnit()}
-            onClose={closeSubmitModal}
-          />
-        </Show>
-      </Suspense>
-
       <footer>
         <div class="footer-notes">
           <p class="privacy-note">
@@ -1354,7 +1398,7 @@ export default function App() {
               type="button"
               role="switch"
               aria-checked={tempUnit() === "celsius"}
-              aria-label={`Temperature unit: ${tempUnit() === "fahrenheit" ? "Fahrenheit" : "Celsius"}`}
+              aria-label="Use Celsius"
               class="vcr-switch vcr-switch-temp"
               classList={{ "is-on": tempUnit() === "celsius" }}
               onClick={() => setTempUnit(tempUnit() === "fahrenheit" ? "celsius" : "fahrenheit")}
@@ -1380,5 +1424,22 @@ export default function App() {
         </div>
       </footer>
     </div>
+
+    <Suspense>
+      <Show when={activeHint()}>
+        <GuideModal activeHint={activeHint()} onClose={() => setActiveHint(null)} />
+      </Show>
+
+      <Show when={showSubmitModal() && effectiveRecipe()}>
+        <SubmitModal
+          recipe={effectiveRecipe()}
+          timeDisplay={formatTime(totalDevSeconds())}
+          tempDisplay={customTemperatureValue()}
+          tempUnit={tempUnit()}
+          onClose={closeSubmitModal}
+        />
+      </Show>
+    </Suspense>
+    </>
   );
 }
