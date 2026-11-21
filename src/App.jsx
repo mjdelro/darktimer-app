@@ -23,6 +23,7 @@ import {
 } from "./process.js";
 import { playDing, playStepComplete, playTick, unlockAudio } from "./audio.js";
 import SearchCombobox from "./SearchCombobox.jsx";
+import { version as APP_VERSION } from "../package.json";
 
 const GuideModal = lazy(() => import("./GuideModal.jsx"));
 const SubmitModal = lazy(() => import("./SubmitModal.jsx"));
@@ -730,12 +731,15 @@ export default function App() {
     <>
     <div class="app-shell" inert={isAnyModalOpen() || undefined}>
       <header class="site-header">
-        <a class="wordmark-button" href="https://darktimer.app/" aria-label="darkTimer">
-          <img class="brand-icon" src="./assets/images/darktimer-icon.png" alt="" aria-hidden="true" width="512" height="512" />
-          <span class="logo-lockup">
-            <img class="brand-wordmark" src="./assets/images/darktimer-logo.png" alt="darkTimer" width="1013" height="231" />
-          </span>
-        </a>
+        <div class="header-brand">
+          <a class="wordmark-button" href="https://darktimer.app/" aria-label="darkTimer">
+            <img class="brand-icon" src="./assets/images/darktimer-icon.png" alt="" aria-hidden="true" width="512" height="512" />
+            <span class="logo-lockup">
+              <img class="brand-wordmark" src="./assets/images/darktimer-logo.png" alt="darkTimer" width="1013" height="231" />
+            </span>
+          </a>
+          <span class="version-badge" aria-label={`Version ${APP_VERSION}`}>v{APP_VERSION}</span>
+        </div>
         <div class="header-actions">
           <div class="process-toggle">
             <span class="process-toggle-label" aria-hidden="true">PROCESS</span>

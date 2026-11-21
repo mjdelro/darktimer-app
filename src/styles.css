@@ -75,6 +75,13 @@ footer {
   gap: 16px;
 }
 
+.header-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
 .wordmark-button {
   min-height: 44px;
   display: inline-flex;
@@ -82,6 +89,21 @@ footer {
   gap: 14px;
   text-decoration: none;
   color: var(--paper);
+}
+
+.version-badge {
+  padding: 3px 7px;
+  border: 1px solid #454741;
+  border-radius: var(--radius-small);
+  background: var(--display);
+  box-shadow: inset 0 1px 4px #000;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .brand-icon {
@@ -1733,8 +1755,17 @@ footer {
     gap: 10px;
   }
 
+  .header-brand {
+    gap: 6px;
+  }
+
   .wordmark-button {
     gap: 8px;
+  }
+
+  .version-badge {
+    padding: 2px 5px;
+    font-size: 0.64rem;
   }
 
   .brand-icon {
