@@ -463,6 +463,10 @@ footer {
 }
 
 .sub-field label {
+  min-height: 28px;
+  padding: 4px 0;
+  display: inline-flex;
+  align-items: flex-end;
   color: var(--muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.72rem;
@@ -473,8 +477,8 @@ footer {
 
 .hint-sub-button {
   width: fit-content;
-  min-height: 44px;
-  padding: 0;
+  min-height: 28px;
+  padding: 4px 0;
   border: 0;
   background: transparent;
   color: var(--muted);
@@ -487,7 +491,7 @@ footer {
   text-underline-offset: 3px;
   cursor: pointer;
   display: inline-flex;
-  align-items: center;
+  align-items: flex-end;
 }
 
 .hint-sub-button:hover,
@@ -505,7 +509,8 @@ footer {
 }
 
 select,
-input[type="number"] {
+input[type="number"],
+.process-panel input[type="text"] {
   width: 100%;
   min-height: 44px;
   padding: 0 12px;
@@ -517,6 +522,18 @@ input[type="number"] {
   box-shadow: inset 0 3px 8px #000;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.88rem;
+}
+
+.process-panel input[type="text"]::placeholder,
+input[type="number"]::placeholder {
+  color: #7e7d77;
+  opacity: 1;
+}
+
+select:disabled,
+.process-panel input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .stage-time-field {
@@ -1631,6 +1648,13 @@ footer {
   .submit-grid,
   .submit-recipe-review {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stage-row.stage-row-presoak {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
   }
 
   .submit-review-full {

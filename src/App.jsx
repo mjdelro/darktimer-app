@@ -745,7 +745,7 @@ export default function App() {
             <form class="process-panel" onSubmit={startProcess}>
               {/* 01 Presoak */}
               <div class="stage-card">
-                <div class="stage-row">
+                <div class="stage-row stage-row-presoak">
                   <div class="stage-label-row">
                     <span class="stage-label"><span class="stage-num">01</span></span>
                     <button class="stage-hint-button" type="button" onClick={() => setActiveHint("presoak")} title="Presoak guide & references">Presoak</button>
