@@ -928,8 +928,8 @@ input[type="number"]:hover,
 
 .vcr-switch-process.is-on {
   background:
-    repeating-linear-gradient(0deg, rgb(255 255 255 / 4%) 0 1px, transparent 1px 3px),
-    linear-gradient(180deg, #d97706 0%, #92400e 100%);
+    repeating-linear-gradient(0deg, rgb(0 0 0 / 16%) 0 1px, transparent 1px 3px),
+    linear-gradient(90deg, #b91c1c 0%, #d97706 24%, #15803d 52%, #1d4ed8 78%, #7e22ce 100%);
 }
 
 .presoak-duration {
