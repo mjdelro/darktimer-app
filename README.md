@@ -1,9 +1,16 @@
-<p align="left">
-  <img src="public/assets/images/darktimer-icon.png" alt="darkTimer film canister icon" width="72" align="middle">&nbsp;&nbsp;
-  <img src="public/assets/images/darktimer-logo.png" alt="darkTimer" height="44" align="middle">
+<p align="center">
+  <img src="public/assets/images/darktimer-icon.png" alt="darkTimer film canister icon" width="76" align="middle" />&nbsp;&nbsp;
+  <img src="public/assets/images/darktimer-logo.png" alt="darkTimer" height="48" align="middle" />
 </p>
 
-# darkTimer
+<p align="center">
+  <a href="https://darktimer.app/"><img src="https://img.shields.io/badge/live-darktimer.app-f28444?style=flat-square" alt="" /></a>
+  <img src="https://img.shields.io/badge/SolidJS%20%2B%20Vite-2c4f7c?style=flat-square&logo=solid&logoColor=white" alt="" />
+  <img src="https://img.shields.io/badge/Docker-ready-2496ED?style=flat-square&logo=docker&logoColor=white" alt="" />
+  <img src="https://img.shields.io/github/license/mjdelro/darktimer-app?style=flat-square&color=64748b" alt="" />
+</p>
+
+---
 
 A touch-friendly, VCR/VFD-inspired black-and-white film development timer built
 with SolidJS and Vite. It runs at [darktimer.app](https://darktimer.app/) and can
